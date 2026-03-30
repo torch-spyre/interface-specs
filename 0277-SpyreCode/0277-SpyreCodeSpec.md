@@ -18,8 +18,9 @@ The execution of a computation kernel on the Spyre device is referred to as a <u
 
 ### Components of `SpyreCode`
 `SpyreCode` facilites the runtime to execute a job on Spyre. It comprises of 3 components:
-* Job plan
-* Job Binary a.k.a. `init.bin`
+* Job execution plan
+* Job preparation plan
+* Job Binaries (a.k.a. `init.bin`)
 * Host Compute Metadata
 
 <p align="center">
@@ -33,9 +34,9 @@ In the virtual address space corresponding to a job, the last segment (SegmentId
 
 The following sections detail the different components of `SpyreCode`.
 
-### Job Plan
+### Job Execution Plan
 
-The Job plan is a JSON object containing a list of commands (List\<JobPlanCommand\>). The runtime executes the commands in sequence to complete the execution of the job. Each command in the job plan is comprised of a command type and its associated attributes.
+The job execution plan is a JSON object containing a list of commands (List\<JobExecPlanCommand\>). The runtime executes the commands in sequence to complete the execution of the job. Each command in the job plan is comprised of a command type and its associated attributes.
 
 The command types in `JobPlanCommand` and their attributes are explained below:
 * `ComputeOnHost`: Triggers execution of a predefined host function API. Its attributs are:
@@ -51,15 +52,25 @@ The command types in `JobPlanCommand` and their attributes are explained below:
   * `host_handle`: A handle for the tensor on the host side.
   * `size`: Size of the data transfer (in Bytes)
   * `dev_ptr`: Starting virtual address where the tensor resides in the device (limited to SegmentId=7). Spyre requires start address to be a multiple of 128B.
+
+### Job Preparation Plan
+
+The job preparation plan is a JSON object containing a list of commands (List\<JobPrepPlanCommand\>). The runtime executes the commands in sequence as a preparation to running the actual job (as given by Job execution plan) on Spyre. The job preparation plan needs to be executed only once, and every subsequent invokation of the job does not need the preperation step. Each command in the job plan is comprised of a command type and its associated attributes.
+
 * `Allocate`: Requests the runtime to allocate space on the device memory. From a virtual address point-of-view, the space is allocated in SegmentId=7 starting from address 0. The 3 uses of the space are: (a) to store the job binary (programs that will run on Spyre cores), (b) to store data needed to effect program correction supporting symbolic start address and tensor/compute shapes and (c) (if required) intermediate data tensors that are allocated in the device memory during backend compilation.
   * `size`: Size of allocation (in Bytes)
   * `breakdown_jobbinary`: Size of job binary (in Bytes)
   * `breakdown_correctiondata`: Size of the data needed for program correction owing to symbolic start address and shapes (in Bytes)
   * `breakdown_tensordata`: Size of intermediate data tensors that spilled over to device memory (in Bytes)
 
-### Job Binary a.k.a. `init.bin`
+* `InitTransfer`: Triggers the transfer of the init (`init.bin`) from host to Spyre. 
+  * `file_path`: Path of `init.bin` file on the host side.
+  * `size`: Size of the init transfer (in Bytes)
+  * `dev_ptr`: Starting virtual address where the init resides in the device (limited to SegmentId=7). Spyre requires start address to be a multiple of 128B.
 
-The `init.bin` is a binary file (not in text format) that contains all programs for the kernel. The runtime is responsible for transferring the job binary from host to the Spyre device’s memory. The job binary is required to be placed at virtual address \<SegmentId=7, address 0\>.
+### Job Binaries a.k.a. `init.bin`
+
+The `init.bin` is a set of binary files (not in text format) that contains the inits (programs for Spyre compute cores) needed to execute the kernel. The runtime transfers the job binaries from host to the Spyre device’s memory as given by the `InitTransfer` command in the Job Preparation Plan.
 
 ### Host Compute metadata:
 
@@ -68,32 +79,48 @@ The host compute metadata is provided as an input to the `ComputeOnHost` job com
 
 ### Execution Flow Examples
 
-#### Example1: Job plan for execution of a kernel with fixed tensor addresses and shapes
+#### Example1: Job preparation and execution plan for a kernel with fixed tensor addresses and shapes
+
+In this example, the compute kernel has tensors with fixed addresses and shapes. 
 
 ```
+A) Job preparation plan
 1. Allocate size=49152, breakdown_jobbinary=32768, breakdown_correctiondata=0, breakdown_tensordata=16384
-2. ComputeOnDevice job_bin_ptr=0x1C00000000
+2. InitTransfer file_path=init.bin, size=32768, dev_ptr=0x1C00000080
+
+B) Job Execution plan
+1. ComputeOnDevice job_bin_ptr=0x1C00000080
 ```
 
-In this example, the compute kernel has tensors with fixed addresses and shapes. In this case, the job plan in `SpyreCode` comprises of a sequence of 2 commands, an `Allocate` and a `ComputeOnDevice`. The `Allocate` indicates total amount of memory the needs to be reserved in SegmentId=7. In this example, a total of 49512 bytes is shown in the `size` attribute. The command further provides a breakdown of the 49512 bytes into 32768 bytes used to store the job binary (`breakdown_jobbinary`) and 16384 bytes used to hold an intermediate data tensor (`breakdown_tensordata`). The `ComputeOnDevice` launches execution on Spyre with the job binary located at a virtual address of 0x1C00000000.
+The job preparation plan in `SpyreCode` comprises of a sequence of 2 commands, `Allocate` and `InitTransfer`. The `Allocate` indicates total amount of memory the needs to be reserved in SegmentId=7. In this example, a total of 49512 bytes is shown in the `size` attribute. The command further provides a breakdown of the 49512 bytes into 32768 bytes used to store the job binary (`breakdown_jobbinary`) and 16384 bytes used to hold an intermediate data tensor (`breakdown_tensordata`). The `InitTransfer` command requests runtime to move the init binary present in file `init.bin` of size 32768 into a specific offset 0x080 in SegmentId=7 (virtual Address = 0x1C00000080).
 
-#### Example2: Job plan for execution of a kernel with symbolic tensor addresses and shapes
+The job execution plan comprises of a single `ComputeOnDevice` command. The `ComputeOnDevice` launches execution on Spyre with the job binary located at a virtual address of 0x1C00000080.
+
+
+#### Example2: Job preparation and execution plan for a kernel with symbolic tensor addresses and shapes
 
 This ia a more complex example, wherein the compute kernel has tensors with symbolic start addresses and shapes. The symbol values are known only during kernel invocation and can change across consecutive lauches of the same kernel. They are fed as input arguments when the kernel is invoked.
 
-With symbolic tensor address/shapes, the job binary produced by the backend compiler cannot be executed as-is on the hardware. It needs to be edited just-in-time knowing the symbol values. This process is referred to as *program correction*. It is accomplished using the following job plan.
+With symbolic tensor address/shapes, the job binary produced by the backend compiler cannot be executed as-is on the hardware. It needs to be edited just-in-time knowing the symbol values. This process is referred to as *program correction*. It is accomplished using the following job preparation and execution plans.
 
 ```
+A) Job preparation plan
 1. Allocate size=51200, breakdown_jobbinary=32768, breakdown_correctiondata=2048, breakdown_tensordata=16384
-2. ComputeOnHost ihandle=iargs, ishape=[4], ohandle=T1, oshape=[16 128], hcm=hcm.json
-3. DataTransfer direction=0 host_handle=T1 size=2048 dev_ptr=0x1C00008000
-4. ComputeOnDevice job_bin_ptr=0x1C00000000
+2. InitTransfer file_path=init.bin, size=32768, dev_ptr=0x1C00000090
+
+B) Job Execution plan
+1. ComputeOnHost ihandle=iargs, ishape=[4], ohandle=T1, oshape=[16 128], hcm=hcm.json
+2. DataTransfer direction=0 host_handle=T1 size=2048 dev_ptr=0x1C00000080
+3. ComputeOnDevice job_bin_ptr=0x1C00000090
 ```
 
-In this case, the job plan comprises of 4 commands.
+The job prepration plan is comprised of 2 commands. 
 * The first command is `Allocate` where 51200 bytes of data is requested, 32768 bytes for the job binary, 16384 bytes for tensor data and an additional 2048 bytes for storing data needed for program correction.
-* The second command is to execute a host function `ComputeOnHost`, which takes the input arguments (4 in this case) and the host compute metadata (*hcm.json*) as its inputs, and produces a data tensor (T1) needed for program correction. The *hcm.json* contains information pertaining to how the input arguments (symbols) must be interpreted in the context of the job binary. For example, if a shape of a dimension in a tensor is symbolic during compilation, then its value (provided as part of input arguments) will be used to correct one of loop counts in the job binary.
-* The third command transfers T1 to the device to a specific location indicated by the *dev_ptr*
+* The second command `InitTransfer` moves the job binary to Spyre. 
+
+Next, the job executplan comprises of 3 commands.
+* The first command is to execute a host function `ComputeOnHost`, which takes the input arguments (4 in this case) and the host compute metadata (*hcm.json*) as its inputs, and produces a data tensor (T1) needed for program correction. The *hcm.json* contains information pertaining to how the input arguments (symbols) must be interpreted in the context of the job binary. For example, if a shape of a dimension in a tensor is symbolic during compilation, then its value (provided as part of input arguments) will be used to correct one of loop counts in the job binary.
+* The second command transfers T1 to the device to a specific location indicated by the *dev_ptr*
 * Finally, the last command executes the job binary. In this case, the job binary contains additional program instructions (which are executed on Sypre core) to first read T1 and make corrections to future program instructions. Then the corrected program instructions are executed (on Spyre cores), successfully completing the kernel execution with the desired tensor address/shape.
 
 ## **Metrics **
