@@ -339,6 +339,12 @@ For all down-casting operations
 
 For all up-casting operations, both input and output should have the same only one dimension in the stick.
 
+### Core work division constraints for the operations
+For all operations, any constituent dimension is allowed to be split across cores. The following constraints apply to the work assigned per core:
+* For all data tensors, The work assigned must be multiple of stick size in any given dimension. This restriction does not apply to index tensors used for indirect access.
+* The span of addresses accessed from DDR for any given tensor must not exceed 256MB.
+* For all index tensors used for indirect access, for each dimension present in the stick, the work assigned to a core should span an intergral number of sticks or <1 stick.
+
 ## Examples
 
 Multiple examples in increasing order of complexity are available [here](examples/).
