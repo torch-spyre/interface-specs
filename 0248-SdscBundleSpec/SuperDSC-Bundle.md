@@ -274,9 +274,11 @@ OpFuncs are specified within sdsc.json as field `OpFuncs opFuncName` in `sdsc.ds
 |         | Q_FP8_CH  |   "qfp8ch"   |  |  Quantize DL16 to FP8<1,4,3>. Pack elements from two input sticks in the same dimension as the input stick dimension, alternating every 8 elements
 |         | Q_FP8_MB  |   "qfp8mb"   |  |  Quantize DL16 to FP8<1,4,3>. Pack elements from two input sticks in a dimension different from the input stick dimension, alternating every 8 elements
 |         | Q_FP8_WT  |   "qfp8wt"   |  |  Quantize DL16 to FP8<1,4,3>. Pack elements from two input sticks in a dimension different from the input stick dimension, alternating after every element
+| Stick Altering Data shuffle | ReStickifyOpHBM | "ReStickifyOpHBM" | | Change the stick composition from one dimension to another dimension. Only one dimension is allowed in input and output stick layouts.
 
 
 ### Stick constraints for the operations
+
 
 Each class of operation imposes constraints on the stick composition of its constituent tensors restricting which dimension can be present in the stick. Tensors will need to be padded to meet the stick constraints. There are noconstraints on the tensor layout beyond a stick.
 
@@ -338,6 +340,9 @@ For all down-casting operations
 * for the `ch` family of quantizations, output stick still only has one dimension, just more elements (INT8/FP8: [`inpdim`=128])
 
 For all up-casting operations, both input and output should have the same only one dimension in the stick.
+
+#### Stick Altering Data shuffle
+Restickify can only operate on input sticks with elements from a single dimension d1 and produce output sticks with elements from a single dimension d2. There is no restriction on which d1 and d2 dimensions are picked.
 
 ### Core work division constraints for the operations
 For all operations, any constituent dimension is allowed to be split across cores. The following constraints apply to the work assigned per core:
