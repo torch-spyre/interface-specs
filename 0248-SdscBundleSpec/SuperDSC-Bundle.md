@@ -352,35 +352,3 @@ Multiple examples in increasing order of complexity are available [here](example
 ## **Metrics **
 * Ability to express all torch operators that are mappable to AIU (post-inductor transformations and decompositions)
 * Ability to express desired computation mapping across cores for each operation
-
-## **Drawbacks**
-
-## **Alternatives**
-
-## **Prior Art**
-
-## **How we teach this**
-
-## **Unresolved questions**
-
-## Resolution
-
-### Level of Support
-Choose one of the following:
-* 1: Overwhelming positive feedback.
-* 2: Positive feedback.
-* 3: Majority Acceptance, with conflicting Feedback.
-* 4: Acceptance, with Little Feedback.
-* 5: Unclear Resolution.
-* 6: RFC Rejected.
-* 7: RFC Rejected, with Conflicting Feedback.
-
-#### Additional Context
-
-### Next Steps
-Will implement it.
-
-#### Tracking issue
-https://github.com/torch-spyre/torch-spyre/issues/248
-
-#### Exceptions
