@@ -402,7 +402,7 @@ When a JobPlan contains a step with a `ProgramCorrectionStep`, SpyreStream must 
 **Synchronization requirements for buffer reuse:**
 - **Within a single `Launch()` call (tiled iterations):** No explicit synchronization needed. FIFO ordering within the stream guarantees that iteration K's H2D completes before iteration K+1's correction callback executes.
 - **Across multiple `Launch()` calls on the same stream:** The caller must call `Synchronize()` before the next `Launch()` to ensure the previous H2D has consumed the buffer. Without synchronization, the next `Launch()`'s correction callback may overwrite the buffer while the previous H2D is still reading from it.
-- **Future multi-stream support:** When multiple streams are introduced, synchronization will use events and signals (e.g., `stream.waitEvent(event)`) to coordinate buffer reuse across streams without blocking the host.
+- **Future multi-stream support:** When multiple streams are introduced, synchronization will use events and signals (e.g., `stream.waitEvent(event)`) to coordinate buffer reuse across streams without blocking the host (see unresolved question #1). Multiple streams can also mitigate device idle time during host-side program correction callbacks: while the correction callback and H2D execute on one stream, another stream can continue executing compute operations on the device (see unresolved question #6).
 
 **Future optimization (not in scope):** Double-buffering for async iteration overlap (unresolved question #4) would require N buffers for N in-flight iterations.
 
