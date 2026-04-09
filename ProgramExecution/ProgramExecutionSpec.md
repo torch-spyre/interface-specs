@@ -124,7 +124,7 @@ ops.push_back(std::make_unique<RuntimeOperationCompute>(binary_addr));
 
 The runtime does not distinguish between the correction program and the compute program; they are opaque within the single CB.
 
-> **RuntimeStream RFC dependency:** This design requires that a `RuntimeOperationHostCallback` operation is not considered complete until the callback function returns — so that FIFO ordering guarantees the subsequent `RuntimeOperationH2D` does not start until the correction tensor is written. The current RuntimeStream RFC language ("the callback does not block the stream") is ambiguous on this point and should be clarified. See unresolved question #9.
+> **RuntimeStream RFC dependency:** This design requires that the `RuntimeOperationHostCallback` blocks the stream until the callback completes. Program correction uses a `RuntimeOperationHostCallback` constructor parameter for blocking semantics to ensure FIFO ordering guarantees the subsequent `RuntimeOperationH2D` does not start until the correction tensor is written.
 
 #### SpyreCode
 
