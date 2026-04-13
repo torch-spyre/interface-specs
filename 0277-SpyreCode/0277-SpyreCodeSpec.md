@@ -59,9 +59,6 @@ The job preparation plan is a JSON object containing a list of commands (List\<J
 
 * `Allocate`: Requests the runtime to allocate space on the device memory. From a virtual address point-of-view, the space is allocated in SegmentId=7 starting from address 0. The 3 uses of the space are: (a) to store the job binary (programs that will run on Spyre cores), (b) to store data needed to effect program correction supporting symbolic start address and tensor/compute shapes and (c) (if required) intermediate data tensors that are allocated in the device memory during backend compilation.
   * `size`: Size of allocation (in Bytes)
-  * `breakdown_jobbinary`: Size of job binary (in Bytes)
-  * `breakdown_correctiondata`: Size of the data needed for program correction owing to symbolic start address and shapes (in Bytes)
-  * `breakdown_tensordata`: Size of intermediate data tensors that spilled over to device memory (in Bytes)
 
 * `InitTransfer`: Triggers the transfer of the init (`init.bin`) from host to Spyre. 
   * `file_path`: Path of `init.bin` file on the host side.
@@ -85,14 +82,14 @@ In this example, the compute kernel has tensors with fixed addresses and shapes.
 
 ```
 A) Job preparation plan
-1. Allocate size=49152, breakdown_jobbinary=32768, breakdown_correctiondata=0, breakdown_tensordata=16384
+1. Allocate size=49152
 2. InitTransfer file_path=init.bin, size=32768, dev_ptr=0x1C00000080
 
 B) Job Execution plan
 1. ComputeOnDevice job_bin_ptr=0x1C00000080
 ```
 
-The job preparation plan in `SpyreCode` comprises of a sequence of 2 commands, `Allocate` and `InitTransfer`. The `Allocate` indicates total amount of memory the needs to be reserved in SegmentId=7. In this example, a total of 49512 bytes is shown in the `size` attribute. The command further provides a breakdown of the 49512 bytes into 32768 bytes used to store the job binary (`breakdown_jobbinary`) and 16384 bytes used to hold an intermediate data tensor (`breakdown_tensordata`). The `InitTransfer` command requests runtime to move the init binary present in file `init.bin` of size 32768 into a specific offset 0x080 in SegmentId=7 (virtual Address = 0x1C00000080).
+The job preparation plan in `SpyreCode` comprises of a sequence of 2 commands, `Allocate` and `InitTransfer`. The `Allocate` indicates total amount of memory the needs to be reserved in SegmentId=7. In this example, a total of 49512 bytes is shown in the `size` attribute. The `InitTransfer` command requests runtime to move the init binary present in file `init.bin` of size 32768 (out of the allocated 49512 bytes) into a specific offset 0x080 in SegmentId=7 (virtual Address = 0x1C00000080).
 
 The job execution plan comprises of a single `ComputeOnDevice` command. The `ComputeOnDevice` launches execution on Spyre with the job binary located at a virtual address of 0x1C00000080.
 
@@ -105,7 +102,7 @@ With symbolic tensor address/shapes, the job binary produced by the backend comp
 
 ```
 A) Job preparation plan
-1. Allocate size=51200, breakdown_jobbinary=32768, breakdown_correctiondata=2048, breakdown_tensordata=16384
+1. Allocate size=51200
 2. InitTransfer file_path=init.bin, size=32768, dev_ptr=0x1C00000090
 
 B) Job Execution plan
@@ -123,37 +120,3 @@ Next, the job executplan comprises of 3 commands.
 * The second command transfers T1 to the device to a specific location indicated by the *dev_ptr*
 * Finally, the last command executes the job binary. In this case, the job binary contains additional program instructions (which are executed on Sypre core) to first read T1 and make corrections to future program instructions. Then the corrected program instructions are executed (on Spyre cores), successfully completing the kernel execution with the desired tensor address/shape.
 
-## **Metrics **
-
-## **Drawbacks**
-
-## **Alternatives**
-
-## **Prior Art**
-
-## **How we teach this**
-
-## **Unresolved questions**
-
-## Resolution
-
-### Level of Support
-Choose one of the following:
-* 1: Overwhelming positive feedback.
-* 2: Positive feedback.
-* 3: Majority Acceptance, with conflicting Feedback.
-* 4: Acceptance, with Little Feedback.
-* 5: Unclear Resolution.
-* 6: RFC Rejected.
-* 7: RFC Rejected, with Conflicting Feedback.
-
-#### Additional Context
-Some people were in favor of it, but some people didn’t want it for project X.
-
-### Next Steps
-Will implement it.
-
-#### Tracking issue
-https://github.com/torch-spyre/torch-spyre/issues/277
-
-#### Exceptions
