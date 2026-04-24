@@ -9,7 +9,7 @@ This RFC introduces a layered stream-based execution model for torch-spyre. The 
 
 ## **Scope**
 
-This RFC introduces: `SpyreStream`, `JobPlan`, `JobPlanStep`, `HostComputeStep`, `PrepareKernel`, `LaunchKernel`, tiled execution, and the SpyreCode → RuntimeOperation translation flow.
+This RFC introduces: `SpyreStream`, `JobPlan`, `JobPlanStep` (polymorphic base class and concrete subclasses), `LaunchContext`, `PrepareKernel`, `LaunchKernel`, tiled execution, and the SpyreCode → RuntimeOperation translation flow.
 
 It depends on (and summarizes relevant parts of):
 - RuntimeStream RFC — `RuntimeStream`, `RuntimeOperation` base class, `RuntimeOperationH2D`/`D2H`/`Compute`/`HostCallback`. See the internal documentation for full details.
@@ -79,58 +79,33 @@ The abstract base class for all operations submitted to `RuntimeStream`. This is
 
 See the RuntimeStream RFC in the internal documentation for the base `RuntimeOperation` class definition (pipeline barriers, completion callbacks) and the standard operation types (`RuntimeOperationH2D`, `RuntimeOperationD2H`, `RuntimeOperationHostCallback`, `RuntimeOperationCompute`). Additional operation types (e.g., firmware metrics collection, memory activation/deactivation, RDMA for inter-device communication, allocation operations) will be added as the `RuntimeOperation` hierarchy evolves. The hierarchy is extensible by design.
 
-**Binary allocation:** During Job Preparation Plan execution, torch-spyre allocates space for each `RuntimeOperationCompute` step's binary via `SpyreAllocator` (which delegates to `FlexAllocator`, using an `AllocationDirective` hinting that this is a program binary so the runtime can place it in the appropriate memory region). The allocation is a single contiguous block whose size is specified by the backend compiler's allocation metadata. This block always holds the program binary, and conditionally includes space for program correction tensors (at compiler-specified offsets, if the kernel requires program correction) and intermediate data tensors the backend compiler needs for scheduling spillover (at compiler-specified offsets, if the backend compiler needed additional DDR space for scheduling). The resulting `CompositeAddress` is stored on the `RuntimeOperationCompute` step by SpyreStream. When constructing a ControlBlock for dispatch, RuntimeStream handles the segment table mapping internally — setting the appropriate segment table entry so that the program binary is addressable from the device's perspective. See the SpyreAllocator RFC in the internal documentation for full details on program allocation and segment mapping.
+**Binary allocation:** During Job Preparation Plan execution, torch-spyre allocates space for each `RuntimeOperationCompute` step's binary via `SpyreAllocator` (which delegates to `FlexAllocator`, using an `AllocationDirective` hinting that this is a program binary so the runtime can place it in the appropriate memory region). The allocation is a single contiguous block whose size is specified by the backend compiler's allocation metadata. This block always holds the program binary, and conditionally includes space for program correction tensors (at compiler-specified offsets, if the kernel requires program correction) and intermediate data tensors the backend compiler needs for scheduling spillover (at compiler-specified offsets, if the backend compiler needed additional DDR space for scheduling). The resulting `CompositeAddress` is stored on the `JobPlanStepCompute` by torch-spyre during `PrepareKernel`. When constructing a ControlBlock for dispatch, RuntimeStream handles the segment table mapping internally — setting the appropriate segment table entry so that the program binary is addressable from the device's perspective. See the SpyreAllocator RFC in the internal documentation for full details on program allocation and segment mapping.
 
 ##### Host Compute Steps
 
-Host compute steps are a general-purpose mechanism for executing host-side functions during kernel execution. These functions consume kernel inputs and/or metadata, produce an output buffer to be transferred to device, and maintain FIFO ordering within a stream. Program correction is the primary use case, but the abstraction supports any host computation needed during execution.
+Host compute steps are a general-purpose mechanism for executing host-side functions during kernel execution. These functions consume composite addresses and/or metadata, produce an output buffer to be transferred to device, and maintain FIFO ordering within a stream. Program correction is the primary use case, but the abstraction supports any host computation needed during execution.
 
-A `HostComputeStep` is prepared during `PrepareKernel` and stored in the `JobPlan`. It carries the function to execute, associated metadata, and output buffer size:
-
-```cpp
-struct HostComputeStep {
-    // The host function to execute. Takes input tensors and metadata, produces output
-    // in the provided buffer. Signature: void(const std::vector<SpyreTensor>&, const json&, void*)
-    HostComputeFunction function;
-
-    // Metadata from the compiler (content depends on the function type).
-    // For program correction, this is typically hcm.json / vdci.json describing how
-    // symbolic values must be interpreted. For other compute steps, this reflects
-    // function-specific configuration.
-    json metadata;
-
-    // Size of the output buffer produced by this host compute step (in bytes).
-    // For program correction, this is the size of the correction tensor from SpyreCode's ComputeOnHost.oshape.
-    // For other compute steps, this reflects the output size needed by the subsequent device operation.
-    size_t output_buffer_size;
-};
-```
+Host compute functionality is implemented by `JobPlanStepHostCompute`, which directly holds the host function, compiler metadata, and a shared output buffer — no separate data carrier struct is needed. See [JobPlanStepHostCompute](#jobplanstephostcompute) for the class definition.
 
 **Program Correction (Primary Use Case):**
 
-When a kernel uses symbolic addresses or shapes, the backend compiler produces a unified binary containing both a correction program and the compute program, along with correction metadata. A `JobPlan` for program correction contains three `JobPlanStep` entries laid out as follows:
+When a kernel uses symbolic addresses or shapes, the backend compiler produces a unified binary containing both a correction program and the compute program, along with correction metadata. During `PrepareKernel`, torch-spyre:
 
-1. Step 0: `operation = null`, `host_compute = HostComputeStep{...}` (prepared during `PrepareKernel`)
-2. Step 1: `operation = RuntimeOperationH2D(...)`, `host_compute = nullopt` (prepared during `PrepareKernel`)
-3. Step 2: `operation = RuntimeOperationCompute(...)`, `host_compute = nullopt` (prepared during `PrepareKernel`)
+1. Allocates a pinned host buffer of the required output size as a `shared_ptr<void>`
+2. Constructs a `JobPlanStepHostCompute` holding the correction function, compiler metadata (e.g., hcm.json), and the shared buffer
+3. Constructs a `JobPlanStepH2D` holding the same shared buffer (as host source) and the device destination address (resolved from the program allocation)
+4. Constructs a `JobPlanStepCompute` holding the binary address
 
-During `LaunchKernel`, when SpyreStream encounters Step 0, it constructs the `RuntimeOperationHostCallback` using the `HostComputeStep` metadata and the actual tensors:
+The resulting `JobPlan` contains three steps:
 
-```cpp
-// In SpyreStream::Launch, when processing a JobPlanStep with a HostComputeStep:
-auto compute_buf = compute_buffers_.acquire(step.host_compute->output_buffer_size);
-auto callback = [compute = *step.host_compute, tensors, compute_buf]() {
-    compute.function(tensors, compute.metadata, compute_buf);
-};
-auto host_callback_op = std::make_unique<RuntimeOperationHostCallback>(
-    /*enablePipelineBarrier=*/true, callback, nullptr);
-// Submit host_callback_op along with the pre-constructed operations from steps [1] and [2]
-```
+1. Step 0: `JobPlanStepHostCompute { function, metadata, output_buffer: <shared pinned buffer> }`
+2. Step 1: `JobPlanStepH2D { host_buffer: <shared pinned buffer>, device_address: <program alloc offset> }`
+3. Step 2: `JobPlanStepCompute { binary_address: <binary allocation> }`
 
-The three operations execute sequentially in stream order:
+During `LaunchKernel`, SpyreStream calls `construct(ctx)` on each step in order. No special-case logic is needed — the uniform construction loop handles all step types. The three resulting operations execute sequentially in stream order:
 
-1. **RuntimeOperationHostCallback** — Executes the host compute on the CPU, taking resolved symbol values (tensor virtual addresses, shape values) and metadata as input, producing output in the pre-allocated buffer.
-2. **RuntimeOperationH2D** — Transfers the output buffer to a reserved location on device (e.g., within the program allocation at a compiler-specified offset for program correction data).
+1. **RuntimeOperationHostCallback** — Executes the host compute on the CPU, taking resolved symbol values (tensor virtual addresses, shape values) and metadata as input, producing output in the shared buffer.
+2. **RuntimeOperationH2D** — Transfers the shared buffer contents to a reserved location on device (e.g., within the program allocation at a compiler-specified offset for program correction data).
 3. **RuntimeOperationCompute** — Launches the compute operation (e.g., the unified binary). The device-side code reads the transferred data if needed (e.g., the correction program reads the correction tensor to patch the compute program).
 
 flex is unaware of the host compute step abstraction — it sees three sequential `RuntimeOperation` objects with no knowledge of their coordination or purpose.
@@ -149,14 +124,14 @@ SpyreCode contains two plans:
 
 **SpyreCode → RuntimeOperation mapping:**
 
-| SpyreCode Command | JobPlan Structure | Notes |
+| SpyreCode Command | JobPlanStep Subclass | Notes |
 |---|---|---|
 | `Allocate` | _(not in JobPlan)_ | torch-spyre calls `SpyreAllocator.allocate()` → `CompositeAddress` during preparation |
-| `InitTransfer` | `JobPlanStep.operation = RuntimeOperationH2D` | Binary loading — host file to device at allocated address |
-| `ComputeOnHost` | `JobPlanStep.operation = null, .host_compute = HostComputeStep` | torch-spyre stores metadata during preparation; constructs RuntimeOperationHostCallback at launch time |
-| `ComputeOnDevice` | `JobPlanStep.operation = RuntimeOperationCompute` | `job_bin_ptr` resolved to `CompositeAddress` from preparation |
-| `DataTransfer(direction=0)` | `JobPlanStep.operation = RuntimeOperationH2D` | `dev_ptr` resolved to `CompositeAddress`; `host_handle` resolved to `void*` |
-| `DataTransfer(direction=1)` | `JobPlanStep.operation = RuntimeOperationD2H` | Same address resolution as above |
+| `InitTransfer` | `JobPlanStepH2D` | Binary loading — host file to device at allocated address |
+| `ComputeOnHost` | `JobPlanStepHostCompute` | Host function, metadata, and shared output buffer stored during preparation; `RuntimeOperationHostCallback` constructed at launch time via `construct()` |
+| `ComputeOnDevice` | `JobPlanStepCompute` | `job_bin_ptr` resolved to `CompositeAddress` from preparation |
+| `DataTransfer(direction=0)` | `JobPlanStepH2D` | `dev_ptr` resolved to `CompositeAddress`; `host_handle` resolved to `void*` |
+| `DataTransfer(direction=1)` | `JobPlanStepD2H` | Same address resolution as above |
 
 **Translation flow:**
 
@@ -164,8 +139,8 @@ SpyreCode contains two plans:
 2. Deeptools compiles each SDSC and produces a `SpyreCode` JSON
 3. torch-spyre parses the SpyreCode and executes the **Job Preparation Plan**:
    a. `Allocate` → `SpyreAllocator.allocate()` (delegates to `FlexAllocator`) → `CompositeAddress`
-   b. `InitTransfer` → constructs a `RuntimeOperationH2D` with the binary data and the allocated `CompositeAddress`, submits to `RuntimeStream`
-4. torch-spyre translates the **Job Execution Plan** into a `JobPlan` — resolving the compiler's symbols to `CompositeAddress` values (via `LogicalAddress`) using the allocations from step 3, and storing the `expected_input_shapes` from the SpyreCode
+   b. `InitTransfer` → constructs a `JobPlanStepH2D` with the binary data and the allocated `CompositeAddress`, submits its `RuntimeOperationH2D` to `RuntimeStream`
+4. torch-spyre translates the **Job Execution Plan** into a `JobPlan` — constructing concrete `JobPlanStep` subclass instances with resolved `CompositeAddress` values (via `LogicalAddress`) using the allocations from step 3, allocating shared pinned buffers for host compute steps, and storing the `expected_input_shapes` from the SpyreCode
 5. The resulting `JobPlan` is cached by torch-spyre and submitted to `SpyreStream.Launch` on each invocation
 
 > **SpyreCodeSpec dependencies:** This RFC assumes the following fields exist in the SpyreCode JSON that are not yet defined in [SpyreCodeSpec.md](../0277-SpyreCode/0277-SpyreCodeSpec.md):
@@ -174,6 +149,20 @@ SpyreCode contains two plans:
 > - Clarification of `host_handle` type/resolution
 >
 > These should be added to 0277-SpyreCodeSpec.md before implementation begins.
+
+#### LaunchContext
+
+A `LaunchContext` carries the runtime data available at `LaunchKernel` time that was not available during `PrepareKernel`. It is constructed per-launch (or per-tile-iteration in tiled execution) by SpyreStream and passed to each `JobPlanStep`'s `construct()` method. SpyreStream extracts the `CompositeAddress` values from the caller's `SpyreTensor` list before constructing the context — steps never access `SpyreTensor` directly.
+
+```cpp
+struct LaunchContext {
+    const std::vector<CompositeAddress>& composite_addresses;
+};
+```
+
+| Property | Description |
+|----------|-------------|
+| `composite_addresses` | The `CompositeAddress` values extracted from the caller's `SpyreTensor` list, corresponding to the kernel's I/O (order matches SpyreCode tensor list). For tiled execution, these are the offset-adjusted addresses for the current tile iteration. |
 
 #### JobPlan
 
@@ -186,28 +175,169 @@ A JobPlan is self-contained: if a compute requires program correction, the corre
 * **Communications libraries:** Create JobPlans for inter-device data transfers, collective operations, or other multi-step communication patterns.
 * **torch-spyre:** Assembles JobPlans for tensor `.to(device)` moves (single `RuntimeOperationH2D` step), tensor `.to("cpu")` readbacks (single `RuntimeOperationD2H` step), or any other sequence of operations it needs to containerize.
 
+##### JobPlanStep (Base Class)
+
+`JobPlanStep` is a polymorphic base class. Each concrete subclass holds the metadata resolved during `PrepareKernel` and implements `construct()` to produce a `RuntimeOperation` at `LaunchKernel` time. This factory method pattern eliminates special-case branching in `SpyreStream::Launch` — new operation types are added as new subclasses with no changes to caller code.
+
+All `RuntimeOperation` objects are transient: constructed inside `construct()`, ownership transferred to `RuntimeStream` via `launchOperation()`, and destroyed when the stream completes the operation. No `RuntimeOperation` is cached in the `JobPlan`.
+
 ```cpp
-struct JobPlanStep {
-    // Pre-constructed RuntimeOperation. For most operations (H2D, D2H, Compute),
-    // this is fully populated during PrepareKernel with resolved CompositeAddress values.
-    // For host compute steps, this is null — SpyreStream constructs the
-    // RuntimeOperationHostCallback at LaunchKernel time using the HostComputeStep metadata.
-    std::shared_ptr<RuntimeOperation> operation;
+class JobPlanStep {
+public:
+    virtual ~JobPlanStep() = default;
 
-    // If present, this step requires host-side computation. SpyreStream constructs
-    // a RuntimeOperationHostCallback with the proper closure at LaunchKernel time.
-    // Only meaningful when operation is null; when present, indicates that a
-    // RuntimeOperationHostCallback should be created using this metadata.
-    std::optional<HostComputeStep> host_compute;
+    virtual std::unique_ptr<RuntimeOperation> construct(LaunchContext& ctx) const = 0;
+
+    void setPipelineBarrier(bool enable) { pipeline_barrier_ = enable; }
+    bool getPipelineBarrier() const { return pipeline_barrier_; }
+
+protected:
+    bool pipeline_barrier_ = false;
 };
+```
 
+##### JobPlanStepH2D
+
+Host-to-device transfer. All fields resolved during `PrepareKernel`. `construct()` produces a `RuntimeOperationH2D`.
+
+When used for correction tensor DMA, the `host_address` points into a pinned host buffer allocated during `PrepareKernel` and shared (via `std::shared_ptr<void>`) with the `JobPlanStepHostCompute` that writes into it. The buffer is allocated once and reused across launches — FIFO ordering within a stream guarantees the HostCompute callback writes the buffer before the H2D reads it. For tiled execution, the same buffer is safely reused across iterations for the same reason. For multi-stream scenarios (e.g., HostCompute on stream A, H2D on stream B), explicit cross-stream synchronization is required.
+
+```cpp
+class JobPlanStepH2D final : public JobPlanStep {
+public:
+    JobPlanStepH2D(void* host_address, CompositeAddress device_address)
+        : host_address_(host_address), device_address_(device_address) {}
+
+    JobPlanStepH2D(std::shared_ptr<void> host_buffer, CompositeAddress device_address)
+        : host_address_(host_buffer.get()), host_buffer_(std::move(host_buffer)),
+          device_address_(device_address) {}
+
+    std::unique_ptr<RuntimeOperation> construct(LaunchContext& ctx) const override {
+        auto op = std::make_unique<RuntimeOperationH2D>(host_address_, device_address_);
+        op->setPipelineBarrier(pipeline_barrier_);
+        return op;
+    }
+
+private:
+    void* host_address_;
+    std::shared_ptr<void> host_buffer_;
+    CompositeAddress device_address_;
+};
+```
+
+##### JobPlanStepD2H
+
+Device-to-host transfer. All fields resolved during `PrepareKernel`. `construct()` produces a `RuntimeOperationD2H`.
+
+```cpp
+class JobPlanStepD2H final : public JobPlanStep {
+public:
+    JobPlanStepD2H(CompositeAddress device_address, void* host_address)
+        : device_address_(device_address), host_address_(host_address) {}
+
+    std::unique_ptr<RuntimeOperation> construct(LaunchContext& ctx) const override {
+        auto op = std::make_unique<RuntimeOperationD2H>(device_address_, host_address_);
+        op->setPipelineBarrier(pipeline_barrier_);
+        return op;
+    }
+
+private:
+    CompositeAddress device_address_;
+    void* host_address_;
+};
+```
+
+##### JobPlanStepCompute
+
+Device compute launch. Binary address resolved during `PrepareKernel`. `construct()` produces a `RuntimeOperationCompute`.
+
+```cpp
+class JobPlanStepCompute final : public JobPlanStep {
+public:
+    explicit JobPlanStepCompute(CompositeAddress binary_address)
+        : binary_address_(binary_address) {}
+
+    std::unique_ptr<RuntimeOperation> construct(LaunchContext& ctx) const override {
+        auto op = std::make_unique<RuntimeOperationCompute>(binary_address_);
+        op->setPipelineBarrier(pipeline_barrier_);
+        return op;
+    }
+
+private:
+    CompositeAddress binary_address_;
+};
+```
+
+##### JobPlanStepHostCompute
+
+Host-side computation (e.g., program correction). The host function, compiler metadata, and a shared output buffer are stored directly as members during `PrepareKernel`. The host function (e.g., the program correction routine) is a predefined runtime function — SpyreCode's `ComputeOnHost` command identifies which function to invoke, and torch-spyre maps it to the corresponding built-in `HostComputeFunction` during SpyreCode translation. The output buffer is a `std::shared_ptr<void>` to pinned host memory, shared with the subsequent `JobPlanStepH2D` that transfers it to device. `construct()` builds a closure capturing the function, metadata, composite addresses, and the buffer, and produces a `RuntimeOperationHostCallback`.
+
+The shared buffer is allocated once during `PrepareKernel` and reused across launches. For tiled execution, the same buffer is reused across iterations — FIFO ordering guarantees each iteration's H2D consumes the buffer before the next iteration's HostCompute overwrites it.
+
+```cpp
+class JobPlanStepHostCompute final : public JobPlanStep {
+public:
+    // function: Predefined runtime host compute function (e.g., program correction),
+    //           selected during SpyreCode translation.
+    // metadata: Compiler-provided metadata (e.g., hcm.json / vdci.json describing
+    //           how symbolic values must be interpreted).
+    // output_buffer: Pinned host buffer shared with the subsequent JobPlanStepH2D.
+    JobPlanStepHostCompute(HostComputeFunction function, json metadata,
+                           std::shared_ptr<void> output_buffer)
+        : function_(std::move(function)), metadata_(std::move(metadata)),
+          output_buffer_(std::move(output_buffer)) {}
+
+    std::unique_ptr<RuntimeOperation> construct(LaunchContext& ctx) const override {
+        auto fn = function_;
+        auto meta = metadata_;
+        const auto& addrs = ctx.composite_addresses;
+        auto* buf = output_buffer_.get();
+        auto callback = [fn, meta, addrs, buf]() {
+            fn(addrs, meta, buf);
+        };
+        return std::make_unique<RuntimeOperationHostCallback>(
+            pipeline_barrier_, callback, nullptr);
+    }
+
+private:
+    HostComputeFunction function_;
+    json metadata_;
+    std::shared_ptr<void> output_buffer_;
+};
+```
+
+##### JobPlanStepComputeSpecialize
+
+Specializes a resident kernel using composite addresses provided by the user at launch time. Binary address resolved during `PrepareKernel`; tensor input/output addresses extracted from `ctx.composite_addresses` during `construct()`. Produces a `RuntimeOperationComputeSpecializeResident`.
+
+> **RuntimeStream RFC dependency:** `RuntimeOperationComputeSpecializeResident` extends `RuntimeOperationCompute` and is not yet defined in the RuntimeStream RFC. Constructor signature: `RuntimeOperationComputeSpecializeResident(CompositeAddress programAddr, vector<CompositeAddress> tensor_input_outputs)`.
+
+```cpp
+class JobPlanStepComputeSpecialize final : public JobPlanStep {
+public:
+    explicit JobPlanStepComputeSpecialize(CompositeAddress binary_address)
+        : binary_address_(binary_address) {}
+
+    std::unique_ptr<RuntimeOperation> construct(LaunchContext& ctx) const override {
+        auto op = std::make_unique<RuntimeOperationComputeSpecializeResident>(
+            binary_address_, ctx.composite_addresses);
+        op->setPipelineBarrier(pipeline_barrier_);
+        return op;
+    }
+
+private:
+    CompositeAddress binary_address_;
+};
+```
+
+##### JobPlan
+
+```cpp
 struct JobPlan {
-    // Ordered sequence of steps. During LaunchKernel, SpyreStream:
-    // 1. For steps with host_compute set: constructs a fresh RuntimeOperationHostCallback
-    //    with the closure built from host_compute metadata + actual tensors
-    // 2. For steps with operation set: uses the pre-constructed operation as-is
-    // Then submits all RuntimeOperations to RuntimeStream in order.
-    std::vector<JobPlanStep> steps;
+    // Ordered sequence of steps. During LaunchKernel, SpyreStream calls
+    // construct(ctx) on each step in order, collecting the resulting
+    // RuntimeOperations, then submits them to RuntimeStream.
+    std::vector<std::unique_ptr<JobPlanStep>> steps;
 
     // Compiled tile dimensions from SpyreCode, one entry per kernel input tensor.
     // Used by SpyreStream for tiling detection.
@@ -220,9 +350,7 @@ struct JobPlan {
 
 | Property | Description |
 |----------|-------------|
-| `JobPlanStep.operation` | Pre-constructed `RuntimeOperation` with resolved `CompositeAddress` values (prepared during `PrepareKernel`). Null when `host_compute` is present; SpyreStream constructs the `RuntimeOperationHostCallback` at `LaunchKernel` time. |
-| `JobPlanStep.host_compute` | Optional `HostComputeStep`. When present, indicates that a `RuntimeOperationHostCallback` should be constructed during `LaunchKernel` using this metadata and the actual tensors passed to `Launch()`. |
-| `JobPlan.steps` | Ordered list of `JobPlanStep` entries |
+| `JobPlan.steps` | Ordered list of polymorphic `JobPlanStep` entries. Each step's `construct()` method produces the appropriate `RuntimeOperation` at launch time. |
 | `JobPlan.expected_input_shapes` | Compiled tile dimensions from SpyreCode. Used by SpyreStream for tiling detection. Empty for pure DMA JobPlans. |
 
 **Step examples** (all `CompositeAddress` fields resolved after preparation):
@@ -230,35 +358,38 @@ struct JobPlan {
 **Simple compute (no host compute):**
 ```
 steps:
-  [0] { operation: RuntimeOperationCompute(<binary allocation>), host_compute: nullopt }
+  [0] JobPlanStepCompute { binary_address: <binary allocation> }
 expected_input_shapes: [[1024, 1024]]
 ```
 
-**Compute with program correction (host compute step):**
+**Compute with program correction (host compute steps):**
+
+During `PrepareKernel`, a pinned host buffer is allocated and shared between step [0] and step [1] via `shared_ptr`. Step [0] writes the correction tensor into the buffer; step [1] transfers it to device. The buffer is allocated once and reused across launches.
 ```
 steps:
-  [0] { operation: null,
-         host_compute: { function=correct_fn, metadata=hcm.json, output_size=2048 } }
-  [1] { operation: RuntimeOperationH2D(<program alloc offset>, 2048),
-         host_compute: nullopt }
-  [2] { operation: RuntimeOperationCompute(<binary allocation>),
-         host_compute: nullopt }
+  [0] JobPlanStepHostCompute { function: correct_fn, metadata: hcm.json,
+                               output_buffer: <shared pinned buffer> }
+  [1] JobPlanStepH2D { host_buffer: <shared pinned buffer>,
+                       device_address: <program alloc offset> }
+  [2] JobPlanStepCompute { binary_address: <binary allocation> }
 expected_input_shapes: [[1024, 1024]]
 ```
 
-During `PrepareKernel`, steps [1] and [2] have their `RuntimeOperation` objects pre-constructed. During `LaunchKernel`, SpyreStream processes step [0] by constructing a `RuntimeOperationHostCallback` with a closure built from the `HostComputeStep` metadata and the actual tensors. All three `RuntimeOperation` objects are then submitted to `RuntimeStream.launchOperation()` as a `vector<RuntimeOperation>`.
+During `LaunchKernel`, SpyreStream calls `construct(ctx)` on each step in order — step [0] produces a `RuntimeOperationHostCallback` whose closure writes the correction tensor into the shared buffer, step [1] produces a `RuntimeOperationH2D` that reads from the same buffer, step [2] produces a `RuntimeOperationCompute`. All three `RuntimeOperation` objects are submitted to `RuntimeStream.launchOperation()` as a `vector<RuntimeOperation>`.
 
 **Pure data transfer:**
 ```
 steps:
-  [0] { operation: RuntimeOperationH2D(tensor_data, <allocation>, 4096), correction: nullopt }
+  [0] JobPlanStepH2D { host_address: tensor_data, device_address: <allocation> }
 ```
 
 #### Ownership and Lifecycle
 
 | Object | Owner | Lifecycle |
 |--------|-------|-----------|
-| JobPlan, RuntimeOperations | torch-spyre | Cached for reuse across invocations. torch-spyre is responsible for creation, caching, and destruction. |
+| JobPlan, JobPlanSteps | torch-spyre | Cached for reuse across invocations. Steps contain metadata and shared buffers; no `RuntimeOperation` objects are cached. torch-spyre is responsible for creation, caching, and destruction. |
+| RuntimeOperations | RuntimeStream | Constructed per-launch by `JobPlanStep::construct()`, ownership transferred to `RuntimeStream` via `launchOperation()`. Lifetime does not extend beyond stream completion. |
+| Shared pinned buffers | JobPlanStepHostCompute + JobPlanStepH2D | Allocated once during `PrepareKernel` as `shared_ptr<void>`, co-owned by the HostCompute and H2D steps in the cached `JobPlan`. Freed when the `JobPlan` is destroyed. |
 | CompositeAddress mappings | flex (FlexAllocator) | Freed when torch-spyre calls `FlexAllocator.deallocate()`. Destruction of a JobPlan does **not** implicitly free device memory — deallocation must be explicit. |
 | Binary on device | Tied to CompositeAddress | Deallocating the CompositeAddress frees the device memory. The on-disk binary (`binary_path`) is independent and may be deleted after loading without affecting the device copy. |
 | SpyreTensor | torch-spyre | Wraps a PyTorch tensor's metadata plus the `CompositeAddress` from FlexAllocator. The underlying device allocation is freed via `FlexAllocator.deallocate()` when the tensor is no longer referenced. |
@@ -301,8 +432,6 @@ public:
 
 private:
     std::shared_ptr<RuntimeStream> runtime_stream_;
-    // Per-stream correction buffer pool (see Correction Buffer Management)
-    CorrectionBufferPool correction_buffers_;
 };
 ```
 
@@ -310,29 +439,47 @@ The default SpyreStream is created during device initialization and retrievable 
 
 **Launch(JobPlan, List\<SpyreTensor\>, allow_tiled_launch=true)**
 
-Extracts CompositeAddresses from the SpyreTensors, then compares each tensor's shape against the JobPlan's `expected_input_shapes`. Three cases:
+Extracts `CompositeAddress` values from the `SpyreTensor` list, constructs a `LaunchContext`, then compares each tensor's shape against the JobPlan's `expected_input_shapes`. Three cases:
 
-1. **Shapes match exactly** — SpyreStream constructs fully-populated RuntimeOperations from the JobPlan's steps (with all addresses filled in) and submits them to RuntimeStream via `launchOperation()`.
+1. **Shapes match exactly** — SpyreStream calls `construct(ctx)` on each `JobPlanStep` in order, collecting the resulting `RuntimeOperation` objects, and submits them to `RuntimeStream` via `launchOperation()`.
 
-2. **Shapes exceed tile size and `allow_tiled_launch` is true** — SpyreStream infers the tiling dimension(s) and iteration count, then for each iteration constructs RuntimeOperations with updated tensor offsets and submits them to RuntimeStream. See [Tiled Execution](#tiled-execution) for details.
+2. **Shapes exceed tile size and `allow_tiled_launch` is true** — SpyreStream infers the tiling dimension(s) and iteration count, then for each iteration adjusts the composite addresses for the current tile, constructs a `LaunchContext` with the adjusted addresses, calls `construct(ctx)` on each step, and collects the operations. All operations across all iterations are submitted to `RuntimeStream`. See [Tiled Execution](#tiled-execution) for details.
 
 3. **Shapes exceed tile size and `allow_tiled_launch` is false** — SpyreStream raises an exception indicating that the tensor shapes do not match the compiled tile size and tiled launch is not permitted.
 
+The core construction loop is uniform across all step types — no branching on operation kind:
+
+```cpp
+void SpyreStream::Launch(const JobPlan& plan,
+                         const std::vector<SpyreTensor>& tensors,
+                         bool allow_tiled_launch) {
+    auto composite_addresses = extractCompositeAddresses(tensors);
+    // ... shape comparison / tiling detection ...
+
+    LaunchContext ctx{composite_addresses};
+
+    std::vector<std::unique_ptr<RuntimeOperation>> ops;
+    ops.reserve(plan.steps.size());
+
+    for (const auto& step : plan.steps) {
+        ops.push_back(step->construct(ctx));
+    }
+
+    runtime_stream_->launchOperation(ops);
+}
+```
+
 **Example 1 — Tensor load (DMA only):**
 
-A JobPlan containing a single `RuntimeOperationH2D` step:
-
-1. **RuntimeOperationH2D** — Copy tensor data from host to device
-
-SpyreStream constructs the operation with the correct addresses and submits it to RuntimeStream.
+A JobPlan containing a single `JobPlanStepH2D`. SpyreStream calls `construct(ctx)` which produces a `RuntimeOperationH2D`, then submits it to RuntimeStream.
 
 **Example 2 — Matmul with program correction:**
 
-A JobPlan containing three steps: Step 0 has `host_compute = HostComputeStep`, Step 1 is an `RuntimeOperationH2D`, and Step 2 is a `RuntimeOperationCompute`:
+A JobPlan containing three steps: a `JobPlanStepHostCompute`, a `JobPlanStepH2D` (sharing the pinned buffer), and a `JobPlanStepCompute`:
 
-1. **Step 0 (HostComputeStep)** — During `LaunchKernel`, SpyreStream builds a closure from the `HostComputeStep` metadata and actual tensors, pre-allocates a host buffer for the correction tensor, and creates a `RuntimeOperationHostCallback` that will write its output there. Submitted to RuntimeStream, which executes it on the host CPU: the closure runs the host compute function with the actual tensor metadata, producing a correction tensor in the pre-allocated buffer.
-2. **Step 1 (RuntimeOperationH2D)** — Pre-constructed during `PrepareKernel`. Submitted to RuntimeStream, which transfers the correction tensor to device (the destination address was resolved during preparation).
-3. **Step 2 (RuntimeOperationCompute)** — Pre-constructed during `PrepareKernel`. Submitted to RuntimeStream, which launches the unified binary. Internally, the correction program reads the correction tensor, patches the compute program, then the matmul executes.
+1. **Step 0 (`JobPlanStepHostCompute`)** — `construct(ctx)` builds a closure from the host function, metadata, and composite addresses, producing a `RuntimeOperationHostCallback`. The closure writes the correction tensor into the shared pinned buffer.
+2. **Step 1 (`JobPlanStepH2D`)** — `construct(ctx)` produces a `RuntimeOperationH2D` that reads from the shared pinned buffer and writes to the device at the program allocation offset.
+3. **Step 2 (`JobPlanStepCompute`)** — `construct(ctx)` produces a `RuntimeOperationCompute` that launches the unified binary.
 
 All three operations are submitted to RuntimeStream as a vector. RuntimeStream executes them in FIFO order — the host compute runs on the CPU first, then the DMA, then the compute.
 
@@ -357,8 +504,9 @@ Tiled execution is handled automatically by `SpyreStream.Launch` when `allow_til
 3. For each iteration `i`:
    a. Compute per-tensor offset: `offset_i = base_offset + (i * tensor_stride_along_tiled_dim * tile_size * element_size)`
    b. For contiguous (single-chunk) allocations, the offset adjusts within the single chunk — `region_id` stays the same. For interleaved (multi-chunk) allocations, the offset calculation depends on the tiling dimension: tiling along the sharded dimension moves across chunks (different `region_id` values), while tiling along non-sharded dimensions adjusts `offset` within each chunk.
-   c. Construct fully-populated RuntimeOperations with updated device addresses (`RuntimeOperationHostCallback` with correction closure and pre-allocated correction buffer, `RuntimeOperationH2D` for correction tensor, `RuntimeOperationCompute`) and submit to RuntimeStream
-   d. All operations enqueued asynchronously — sequential within the stream
+   c. Construct a `LaunchContext` with the adjusted composite addresses for this iteration
+   d. Call `construct(ctx)` on each `JobPlanStep` in order, collecting the resulting `RuntimeOperation` objects
+   e. All operations enqueued asynchronously — sequential within the stream
 
 **Example — Matmul tiling along M (with program correction):**
 
@@ -373,11 +521,13 @@ Iteration 2: A[2048:3072, :] * B → C[2048:3072, :]
 Iteration 3: A[3072:4096, :] * B → C[3072:4096, :]
 ```
 
-Each iteration, SpyreStream constructs and submits to RuntimeStream:
+Each iteration, SpyreStream constructs a `LaunchContext` with adjusted composite addresses and calls `construct(ctx)` on each step, producing and submitting to RuntimeStream:
 
 ```
-RuntimeOperationHostCallback(correction_closure_i) → RuntimeOperationH2D(correction_tensor_i) → RuntimeOperationCompute(binary)
+RuntimeOperationHostCallback(correction_closure_i) → RuntimeOperationH2D(shared_buffer → device) → RuntimeOperationCompute(binary)
 ```
+
+The shared pinned buffer between the `JobPlanStepHostCompute` and `JobPlanStepH2D` is safely reused across iterations — FIFO ordering guarantees each iteration's H2D consumes the buffer before the next iteration's HostCompute overwrites it.
 
 Tensors whose shapes already match the tile (e.g., `B` above) have stride 1 — they are reused across iterations without offset changes.
 
@@ -403,21 +553,20 @@ SpyreStream uses a **sticky error model** (similar to CUDA streams). Once an err
 
 ### Host Compute Buffer Management
 
-When a JobPlan contains a step with a `HostComputeStep`, SpyreStream must provide a host-side buffer for the host compute function's output.
+When a JobPlan contains a `JobPlanStepHostCompute` paired with a `JobPlanStepH2D`, they share a pinned host buffer allocated during `PrepareKernel` as a `std::shared_ptr<void>`. Both steps hold a `shared_ptr` to the buffer, so it lives as long as the `JobPlan` that contains them.
 
 **Allocation strategy:**
-- Each SpyreStream maintains a `HostComputeBufferPool` — a simple pool of pinned host memory buffers sized to the maximum output size for the stream's active JobPlans.
-- On the first `Launch` of a JobPlan requiring host compute, SpyreStream allocates a buffer from the pool (or grows the pool). The buffer size is determined by the `HostComputeStep.output_buffer_size`.
-- For tiled execution within a single `Launch()` call, a **single buffer is reused** across iterations. This is safe because operations within a stream are sequential — iteration K's host compute output is consumed by its H2D before iteration K+1's host compute overwrites the buffer.
+- During `PrepareKernel`, torch-spyre allocates a pinned host buffer for each `JobPlanStepHostCompute` in the plan. The buffer size is determined by the output size specified in SpyreCode's `ComputeOnHost.oshape`.
+- The same `shared_ptr<void>` is passed to the `JobPlanStepHostCompute` (which writes into it) and the `JobPlanStepH2D` (which reads from it). No runtime buffer pool is needed on `SpyreStream`.
+- Each `JobPlan` owns its own buffer(s) — no sharing between plans.
 
-**Lifecycle:**
-- Buffers are owned by the SpyreStream and freed when the stream is destroyed.
-- Buffer reuse across `Launch()` calls is permitted (same JobPlan or different, as long as size fits), but requires explicit synchronization.
+**Reuse across launches and tiled iterations:**
+- The buffer is reused across successive `Launch()` calls of the same `JobPlan`, since the `JobPlan` is cached.
+- For tiled execution within a single `Launch()` call, the same buffer is reused across iterations. FIFO ordering within the stream guarantees that iteration K's H2D consumes the buffer before iteration K+1's HostCompute overwrites it.
 
-**Synchronization requirements for buffer reuse:**
-- **Within a single `Launch()` call (tiled iterations):** No explicit synchronization needed. FIFO ordering within the stream guarantees that iteration K's H2D completes before iteration K+1's correction callback executes.
-- **Across multiple `Launch()` calls on the same stream:** The caller must call `Synchronize()` before the next `Launch()` to ensure the previous H2D has consumed the buffer. Without synchronization, the next `Launch()`'s correction callback may overwrite the buffer while the previous H2D is still reading from it.
-- **Future multi-stream support:** When multiple streams are introduced, synchronization will use events and signals (e.g., `stream.waitEvent(event)`) to coordinate buffer reuse across streams without blocking the host (see unresolved question #1). Multiple streams can also mitigate device idle time during host-side program correction callbacks: while the correction callback and H2D execute on one stream, another stream can continue executing compute operations on the device (see unresolved question #6).
+**Multi-stream synchronization:**
+- **Single stream:** No explicit synchronization needed — FIFO ordering guarantees correctness.
+- **Multi-stream (e.g., HostCompute on stream A, H2D on stream B):** Explicit cross-stream synchronization is required to ensure the HostCompute callback completes before the H2D reads the buffer. This will use stream events/signals when available (see unresolved question #1). Multiple streams can also mitigate device idle time during host-side program correction callbacks: while the correction callback and H2D execute on one stream, another stream can continue executing compute operations on the device (see unresolved question #6).
 
 **Future optimization (not in scope):** Double-buffering for async iteration overlap (unresolved question #4) would require N buffers for N in-flight iterations.
 
@@ -428,8 +577,9 @@ These functions live in `SpyreSDSCKernelRunner` or equivalent torch-spyre compon
 ```cpp
 // Called once after backend compilation. Parses SpyreCode, executes Job Preparation Plan
 // (allocations via SpyreAllocator, binary loading via RuntimeOperationH2D on the given stream),
-// translates Job Execution Plan into RuntimeOperations with resolved CompositeAddress values,
-// and constructs a JobPlan. The resulting JobPlan is cached for reuse across invocations.
+// translates Job Execution Plan into concrete JobPlanStep subclass instances with resolved
+// CompositeAddress values and shared pinned buffers, and constructs a JobPlan.
+// The resulting JobPlan is cached for reuse across invocations.
 // Synchronous — blocks until binary loading completes (calls stream.Synchronize() internally).
 std::shared_ptr<JobPlan> PrepareKernel(
     const SpyreCode& spyre_code,
@@ -444,9 +594,9 @@ void LaunchKernel(
     const std::vector<SpyreTensor>& tensors);
 ```
 
-**PrepareKernel** executes the Job Preparation Plan: `Allocate` → `SpyreAllocator.allocate()` (delegates to `FlexAllocator`, using an `AllocationDirective` with `policy=Bind` targeting the program memory region) → `CompositeAddress`; `InitTransfer` → constructs a `RuntimeOperationH2D` with the binary data and the allocated `CompositeAddress`, submits to `RuntimeStream.launchOperation()`. It then translates the Job Execution Plan into a `JobPlan` with resolved `CompositeAddress` values, cached for reuse.
+**PrepareKernel** executes the Job Preparation Plan: `Allocate` → `SpyreAllocator.allocate()` (delegates to `FlexAllocator`, using an `AllocationDirective` with `policy=Bind` targeting the program memory region) → `CompositeAddress`; `InitTransfer` → constructs a `JobPlanStepH2D` with the binary data and the allocated `CompositeAddress`, calls `construct()` to produce a `RuntimeOperationH2D`, and submits it to `RuntimeStream.launchOperation()`. It then translates the Job Execution Plan into a `JobPlan` — constructing concrete `JobPlanStep` subclass instances with resolved `CompositeAddress` values, allocating shared pinned buffers for host compute steps, and caching the result for reuse.
 
-**LaunchKernel** is the entry point for repeated kernel execution. Currently delegates to `SpyreStream.Launch(job_plan, tensors, allow_tiled_launch)`. The `allow_tiled_launch` value can be controlled by a user environment setting (`SPYRE_ALLOW_TILED_LAUNCH`), allowing users to disable automatic tiling for debugging or to enforce that tensor shapes exactly match the compiled tile size. For interleaved tensors, SpyreStream accounts for the multi-chunk `CompositeAddress` layout when computing tiled offsets and assembling correction metadata. In the future, LaunchKernel may coordinate across multiple streams to interleave execution of independent operation sequences.
+**LaunchKernel** is the entry point for repeated kernel execution. Delegates to `SpyreStream.Launch(job_plan, tensors, allow_tiled_launch)`, which extracts composite addresses, constructs a `LaunchContext`, and calls `construct(ctx)` on each step in order. The `allow_tiled_launch` value can be controlled by a user environment setting (`SPYRE_ALLOW_TILED_LAUNCH`), allowing users to disable automatic tiling for debugging or to enforce that tensor shapes exactly match the compiled tile size. For interleaved tensors, SpyreStream accounts for the multi-chunk `CompositeAddress` layout when computing tiled offsets. In the future, LaunchKernel may coordinate across multiple streams to interleave execution of independent operation sequences.
 
 ### Workflows
 
@@ -463,8 +613,8 @@ void LaunchKernel(
 
 1. User creates a `CPUTensor` and calls `.to(device)`
 2. SpyreAllocator (via FlexAllocator) allocates a block, producing a `CompositeAddress`
-3. torch-spyre creates a JobPlan with a single `RuntimeOperationH2D` step (host_address, composite_address, size)
-4. `SpyreStream.Launch(job_plan, tensors)` extracts CompositeAddresses from SpyreTensors, constructs a fully-populated `RuntimeOperationH2D`, and submits it to `RuntimeStream.launchOperation()` — returns immediately
+3. torch-spyre creates a JobPlan with a single `JobPlanStepH2D` (host_address, composite_address)
+4. `SpyreStream.Launch(job_plan, tensors)` extracts composite addresses, constructs a `LaunchContext`, calls `construct(ctx)` on the step to produce a `RuntimeOperationH2D`, and submits it to `RuntimeStream.launchOperation()` — returns immediately
 5. RuntimeStream produces a DMA control block and dispatches it to hardware
 6. Result is a `SpyreTensor` carrying the device address metadata
 7. Host may continue work; data transfer proceeds asynchronously on the stream
@@ -486,8 +636,8 @@ void LaunchKernel(
 2. Deeptools (backend compiler) produces a `SpyreCode` JSON per SDSC containing a Job Preparation Plan and a Job Execution Plan
 3. torch-spyre parses each SpyreCode and executes the **Job Preparation Plan** (run once per SDSC):
    a. `Allocate` → `SpyreAllocator.allocate()` (delegates to `FlexAllocator`, using an `AllocationDirective` with `policy=Bind` targeting the program memory region) → `CompositeAddress`
-   b. `InitTransfer` → constructs a `RuntimeOperationH2D` with the binary data and the allocated `CompositeAddress`, submits to `RuntimeStream.launchOperation()`
-4. torch-spyre translates the **Job Execution Plan** into a `JobPlan` (torch-spyre internal), resolving the compiler's symbols to `CompositeAddress` values using the allocations from step 3 and storing `expected_input_shapes` from the SpyreCode
+   b. `InitTransfer` → constructs a `JobPlanStepH2D` with the binary data and the allocated `CompositeAddress`, calls `construct()` to produce a `RuntimeOperationH2D`, and submits it to `RuntimeStream.launchOperation()`
+4. torch-spyre translates the **Job Execution Plan** into a `JobPlan` (torch-spyre internal) — constructing concrete `JobPlanStep` subclass instances with resolved `CompositeAddress` values using the allocations from step 3, allocating shared pinned buffers for host compute steps, and storing `expected_input_shapes` from the SpyreCode
 5. JobPlans are cached by torch-spyre for reuse across invocations
 
 #### Workflow 3: Detailed Execution — LaunchKernel to Hardware
@@ -506,6 +656,7 @@ This diagram shows the full path from `LaunchKernel` through every layer for a m
 │    tensors, allow_tiled_launch)               │  │                                      │
 │         │                                     │  │                                      │
 │  Extract CompositeAddresses from SpyreTensors │  │                                      │
+│  Construct LaunchContext { addrs }             │  │                                      │
 │         │                                     │  │                                      │
 │  Compare tensor shapes against                │  │                                      │
 │  JobPlan.expected_input_shapes:               │  │                                      │
@@ -521,14 +672,14 @@ This diagram shows the full path from `LaunchKernel` through every layer for a m
 │  (showing exact-match case below;             │  │                                      │
 │   see Workflow 4 for tiled case)              │  │                                      │
 │         │                                     │  │                                      │
-│  Construct fully-populated operations:        │  │                                      │
+│  for (step : plan.steps)                      │  │                                      │
+│    step->construct(ctx) produces:             │  │                                      │
 │    1. RuntimeOperationHostCallback            │  │                                      │
-│       (correction closure w/ pre-allocated    │  │                                      │
-│        buffer, barrier=true)                  │  │                                      │
+│       (closure w/ shared buffer)              │  │                                      │
 │    2. RuntimeOperationH2D                     │  │                                      │
-│       (correction buffer → device)             │  │                                      │
+│       (shared buffer → device)                │  │                                      │
 │    3. RuntimeOperationCompute                 │  │                                      │
-│       (composite_address)                     │  │                                      │
+│       (binary_address)                        │  │                                      │
 │         │                                     │  │                                      │
 │  Submit to RuntimeStream.launchOperation()────┼──┼─▶ RuntimeStream                      │
 │                                               │  │   (FIFO — sequential within stream)  │
@@ -536,10 +687,10 @@ This diagram shows the full path from `LaunchKernel` through every layer for a m
 │                                               │  │   ┌─────────────────────────────┐    │
 │                                               │  │   │ 1. HostCallback             │    │
 │                                               │  │   │    (correction, on CPU)     │    │
-│                                               │  │   │    → correction tensor      │    │
+│                                               │  │   │    → writes shared buffer   │    │
 │                                               │  │   ├─────────────────────────────┤    │
 │                                               │  │   │ 2. H2D                      │    │
-│                                               │  │   │    correction_tensor →      │    │
+│                                               │  │   │    shared buffer →          │    │
 │                                               │  │   │    program alloc, offset    │    │
 │                                               │  │   ├─────────────────────────────┤    │
 │                                               │  │   │ 3. Compute                  │    │
@@ -563,16 +714,12 @@ This diagram shows the full path from `LaunchKernel` through every layer for a m
 
 1. `LaunchKernel(spyre_stream, job_plan, tensors)` is called from torch-spyre
 2. Delegates to `SpyreStream.Launch(job_plan, tensors, allow_tiled_launch)`
-3. SpyreStream extracts CompositeAddresses from SpyreTensors
+3. SpyreStream extracts `CompositeAddress` values from `SpyreTensor` list, constructs a `LaunchContext`
 4. SpyreStream compares tensor shapes against the JobPlan's `expected_input_shapes`:
    * Shapes match exactly → proceeds with single-iteration construction (this workflow)
    * Shapes exceed tile size and `allow_tiled_launch` is true → tiled iterations (see Workflow 4)
    * Shapes exceed tile size and `allow_tiled_launch` is false → raises exception
-5. SpyreStream walks the JobPlan's steps:
-   * For steps with `host_compute` set: constructs a `RuntimeOperationHostCallback` with closure built from `HostComputeStep` metadata and tensors, with `barrier=true`
-   * For steps with `operation` set: uses the pre-constructed operation as-is
-   * For the H2D following host compute: pre-constructed with the host compute output buffer location
-   * For Compute: pre-constructed with the binary's CompositeAddress
+5. SpyreStream calls `construct(ctx)` on each `JobPlanStep` in order — no branching on step type. Each step produces the appropriate `RuntimeOperation`.
 6. SpyreStream submits all operations to `RuntimeStream.launchOperation()` as a vector
 7. RuntimeStream executes them in FIFO order: runs program correction on CPU, then dispatches DMA and compute to hardware
 8. Host returns immediately; call `SpyreStream.Synchronize()` when results are needed
@@ -594,8 +741,10 @@ This diagram shows the full path from `LaunchKernel` through every layer for a m
 │  allow_tiled_launch=true → proceed            │  │                                      │
 │  Infer: 4 iterations (4096/1024)              │  │                                      │
 │         │                                     │  │                                      │
-│  For each iteration, construct ops            │  │                                      │
-│  with updated offsets:                        │  │                                      │
+│  For each iteration:                          │  │                                      │
+│    adjust addrs → LaunchContext               │  │                                      │
+│    for (step : steps)                         │  │                                      │
+│      step->construct(ctx)                     │  │                                      │
 │    ┌─────────┐                                │  │                                      │
 │    │ iter 0  │─▶ Callback₀, H2D₀, Compute₀   │  │                                      │
 │    ├─────────┤                                │  │                                      │
@@ -618,15 +767,14 @@ This diagram shows the full path from `LaunchKernel` through every layer for a m
 
 1. `LaunchKernel(spyre_stream, job_plan, tensors)` is called from torch-spyre
 2. Delegates to `SpyreStream.Launch(job_plan, tensors, allow_tiled_launch=true)`
-3. SpyreStream extracts CompositeAddresses from SpyreTensors
+3. SpyreStream extracts `CompositeAddress` values from `SpyreTensor` list
 4. SpyreStream compares tensor shapes against the JobPlan's `expected_input_shapes` — detects shapes exceed tile size
 5. `allow_tiled_launch` is true → SpyreStream proceeds with tiled execution
 6. SpyreStream infers tiling dimension and `num_iterations = 4096 / 1024 = 4`
-7. For each iteration `i`, SpyreStream processes JobPlan steps with updated tensor addresses:
-   * Computes updated tensor offsets for iteration `i`
-   * For steps with `host_compute`: constructs a new `RuntimeOperationHostCallback` with closure built from `HostComputeStep` metadata and updated tensors for this iteration
-   * For steps with `operation`: uses the pre-constructed operation (address and other properties don't change, only the logical tensor offsets do)
-   * **RuntimeOperationCompute**: configured with the binary's CompositeAddress (same for all iterations)
+7. For each iteration `i`:
+   * Computes adjusted composite addresses for iteration `i`
+   * Constructs a `LaunchContext` with the adjusted addresses
+   * Calls `construct(ctx)` on each `JobPlanStep` in order — same uniform loop as the non-tiled case, no branching on step type
 8. SpyreStream submits all 12 operations (3 per iteration × 4 iterations) to `RuntimeStream.launchOperation()`
 9. RuntimeStream executes all operations in FIFO order: runs program corrections on CPU, dispatches DMA and compute to hardware
 10. Host returns immediately; call `SpyreStream.Synchronize()` to block until all iterations complete
@@ -727,7 +875,7 @@ TBD
 
 4. **Async iteration overlap**: Currently each tiled iteration within a stream is sequential. Could we use separate streams or double-buffering to overlap iteration N+1's data movement with iteration N's compute?
 
-5. **Program correction across PF/VF modes**: The host compute closure (built from `HostComputeStep`) takes LogicalAddresses as input — these are extracted from the `CompositeAddress` chunks provided directly by torch-spyre. Since LogicalAddress is a single type (`region_id` + `offset`) in both modes, the closure can process them uniformly — but the correction program on device may still need to interpret `region_id` differently (firmware lookup index vs. physical address). How should this mode distinction be communicated to the correction program?
+5. **Program correction across PF/VF modes**: The host compute closure (built by `JobPlanStepHostCompute::construct()`) takes composite addresses as input — these are extracted from the `LaunchContext.composite_addresses` provided by SpyreStream. Since `LogicalAddress` is a single type (`region_id` + `offset`) in both modes, the closure can process them uniformly — but the correction program on device may still need to interpret `region_id` differently (firmware lookup index vs. physical address). How should this mode distinction be communicated to the correction program?
 
 6. **Pipelining across operation sequences**: The hardware supports a 3-stage pipeline across operations: while one `RuntimeOperationCompute` executes, the correction `RuntimeOperationHostCallback` and `RuntimeOperationH2D` for the *next* operation can overlap (since DMA does not engage AI cores). This inter-sequence pipelining is distinct from unresolved question #4 (which covers intra-sequence tiled iteration overlap). How should SpyreStream and RuntimeStream coordinate to exploit this overlap — should SpyreStream submit operations from multiple sequences to RuntimeStream concurrently, or should RuntimeStream handle pipelining internally?
 
