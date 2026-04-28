@@ -334,9 +334,19 @@ private:
 
 ```cpp
 struct JobPlan {
+    // The owning CompositeAddress for the device memory allocation backing this plan's
+    // binary, correction data, and intermediate tensors. Allocated during PrepareKernel
+    // via FlexAllocator.allocate() and corresponds to the SpyreCode Allocate command.
+    // The JobPlan is responsible for calling FlexAllocator.deallocate() on this address
+    // when destroyed. The JobPlanSteps hold non-owning CompositeAddresses derived from
+    // this allocation (at compiler-specified offsets within the region).
+    CompositeAddress program_allocation;
+
     // Ordered sequence of steps. During LaunchKernel, SpyreStream calls
     // construct(ctx) on each step in order, collecting the resulting
     // RuntimeOperations, then submits them to RuntimeStream.
+    // Steps hold non-owning CompositeAddresses pointing into program_allocation
+    // at offsets derived from the compiler's dev_ptr values.
     std::vector<std::unique_ptr<JobPlanStep>> steps;
 
     // Compiled tile dimensions from SpyreCode, one entry per kernel input tensor.
@@ -350,7 +360,8 @@ struct JobPlan {
 
 | Property | Description |
 |----------|-------------|
-| `JobPlan.steps` | Ordered list of polymorphic `JobPlanStep` entries. Each step's `construct()` method produces the appropriate `RuntimeOperation` at launch time. |
+| `JobPlan.program_allocation` | The owning `CompositeAddress` from `FlexAllocator.allocate()`, corresponding to the SpyreCode `Allocate` command. This is the allocation that backs the binary, correction data, and intermediate tensors. The `JobPlan` is responsible for deallocating this when destroyed. Steps hold non-owning `CompositeAddress` values derived from this allocation at compiler-specified offsets. |
+| `JobPlan.steps` | Ordered list of polymorphic `JobPlanStep` entries. Each step holds non-owning `CompositeAddress` values (derived from `program_allocation` at `dev_ptr` offsets) and its `construct()` method produces the appropriate `RuntimeOperation` at launch time. |
 | `JobPlan.expected_input_shapes` | Compiled tile dimensions from SpyreCode. Used by SpyreStream for tiling detection. Empty for pure DMA JobPlans. |
 
 **Step examples** (all `CompositeAddress` fields resolved after preparation):
@@ -387,11 +398,12 @@ steps:
 
 | Object | Owner | Lifecycle |
 |--------|-------|-----------|
-| JobPlan, JobPlanSteps | torch-spyre | Cached for reuse across invocations. Steps contain metadata and shared buffers; no `RuntimeOperation` objects are cached. torch-spyre is responsible for creation, caching, and destruction. |
+| JobPlan | torch-spyre | Cached for reuse across invocations. Owns `program_allocation` (the device memory backing binaries/correction/intermediate data). When destroyed, calls `FlexAllocator.deallocate(program_allocation)` to free device memory. |
+| JobPlan.program_allocation | JobPlan | The owning `CompositeAddress` from `FlexAllocator.allocate()`. Controls the lifecycle of the device memory. Steps hold non-owning `CompositeAddress` values derived from this at compiler-specified offsets. |
+| JobPlanSteps | JobPlan | Hold non-owning `CompositeAddress` values (views into `program_allocation`), shared pinned buffers, and metadata. No `RuntimeOperation` objects are cached. |
 | RuntimeOperations | RuntimeStream | Constructed per-launch by `JobPlanStep::construct()`, ownership transferred to `RuntimeStream` via `launchOperation()`. Lifetime does not extend beyond stream completion. |
 | Shared pinned buffers | JobPlanStepHostCompute + JobPlanStepH2D | Allocated once during `PrepareKernel` as `shared_ptr<void>`, co-owned by the HostCompute and H2D steps in the cached `JobPlan`. Freed when the `JobPlan` is destroyed. |
-| CompositeAddress mappings | flex (FlexAllocator) | Freed when torch-spyre calls `FlexAllocator.deallocate()`. Destruction of a JobPlan does **not** implicitly free device memory — deallocation must be explicit. |
-| Binary on device | Tied to CompositeAddress | Deallocating the CompositeAddress frees the device memory. The on-disk binary (`binary_path`) is independent and may be deleted after loading without affecting the device copy. |
+| Binary on device | Tied to `program_allocation` | Deallocating `program_allocation` frees the device memory. The on-disk binary (`binary_path`) is independent and may be deleted after loading without affecting the device copy. |
 | SpyreTensor | torch-spyre | Wraps a PyTorch tensor's metadata plus the `CompositeAddress` from FlexAllocator. The underlying device allocation is freed via `FlexAllocator.deallocate()` when the tensor is no longer referenced. |
 
 #### SpyreStream
