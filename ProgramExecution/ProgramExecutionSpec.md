@@ -330,6 +330,49 @@ private:
 };
 ```
 
+#### Compute Modes
+
+`RuntimeOperationCompute` supports two modes of device compute. The mode is signaled by the presence or absence of the tensor `CompositeAddress` vector:
+
+- **Non-null tensor vector:** 1 tensor per segment (mode 1)
+- **Null tensor vector:** Program correction (mode 2)
+
+##### Mode 1: 1 Tensor Per Segment
+
+**When:** The compiler determines that an operation has fewer than 7 tensor inputs.
+
+`JobPlanStepComputeSpecialize` produces this mode. Its `construct(ctx)` extracts tensor `CompositeAddress` values from `LaunchContext.composite_addresses` and passes them to `RuntimeOperationCompute` as a non-null vector alongside the program's `CompositeAddress`. RuntimeStream uses these to construct the segment table internally (see RuntimeStream RFC for segment table details).
+
+Tensors can reside in any region -- placement is unconstrained from torch-spyre's perspective.
+
+##### Mode 2: Program Correction
+
+**When:** The compiler determines that an operation has 7 or more tensor inputs.
+
+`JobPlanStepCompute` produces this mode. Its `construct(ctx)` passes only the program's `CompositeAddress` -- the tensor vector is null. Tensor addressing is handled by the program correction workflow: a `JobPlanStepHostCompute` step computes the correction metadata from the tensor `CompositeAddress` values, and a `JobPlanStepH2D` step DMAs the result to the program allocation. The program reads this metadata at runtime to locate its inputs.
+
+**Program correction execution sequence:**
+
+1. **RuntimeOperationHostCallback** -- Host compute takes tensor `CompositeAddress` values (from `LaunchContext`) and compiler metadata as input. Produces a PCM host tensor written to a shared pinned buffer.
+
+2. **RuntimeOperationH2D** -- Transfers the PCM host tensor from the shared pinned buffer to the PCM tensor's non-owning `CompositeAddress` within the program allocation.
+
+3. **RuntimeOperationCompute** -- Launches with only the program's `CompositeAddress`. Tensor vector is null. RuntimeStream constructs the segment table internally (see RuntimeStream RFC). The program reads the PCM tensor to locate its inputs.
+
+##### Program Allocation Layout
+
+During `PrepareKernel`, torch-spyre allocates a single contiguous block for each compute step via `FlexAllocator.allocate()` (using an `AllocationDirective` with `memory_type=Program`). This block contains:
+
+* **PCM tensor** -- space for program correction metadata (written per-launch by the host compute step)
+* **Program binary** -- the compiled kernel
+* **Spillover** -- intermediate data the backend compiler needs for scheduling
+
+These components can exist at any offset within the program allocation. Each has a non-owning `CompositeAddress` derived from the owning allocation at compiler-specified offsets during `PrepareKernel`. The owning `CompositeAddress` is stored on the `JobPlan`; the non-owning addresses are stored on the respective `JobPlanStep` instances.
+
+##### Why the Program Region Must Be Exclusive
+
+The runtime must support both compute modes -- the compiler decides per-operation which mode to use. In program correction mode, tensors in the program region would be invisible to compute (see RuntimeStream RFC for details). Because we cannot guarantee that program correction will never be used, tensor allocations must never land in the program region. This is enforced by the allocator's `MemoryType` concept (see SpyreAllocator RFC).
+
 ##### JobPlan
 
 ```cpp
