@@ -4,7 +4,7 @@
 
 This document describes the JSON structure for SDSC Bundle format as defined in `sdscbundle-schema.json`. This schema covers only fields described in [sdscbundle-schema.json](sdscbundle-schema.json). Furthermore, the aforementioned schema follows the JSON standard as described in [JSON Schema](https://json-schema.org/learn/getting-started-step-by-step). The structure is based on [draft 2020-12](https://json-schema.org/draft/2020-12).
 
-**Important**: This schema represents what the **frontend (torch-spyre)** is allowed to produce to drive the **backend (DeepTools)**.
+**Important**: This schema represents what the **frontend ([torch-spyre](https://torch-spyre.readthedocs.io/))** is allowed to produce to drive the **backend compiler**.
 
 SuperDSC or SuperDSC Bundle is the interface between torch-spyre and the backend compiler. To ensure the SuperDSC contract is well maintained and easily verifiable we propose a framework to perform SDSC validation outside the bounds of the backend compiler. Such validation engines can be plugged into torch-spyre, maintained separately or added as modules in other verification frameworks like [Torch-Spyre Mock Device RFC](https://ibm.ent.box.com/notes/2163908442337?s=ykg1smqadxrcp9julyyj3pse0sg7rrq7).
 
@@ -56,18 +56,13 @@ python validate_schemas.py sdscbundle-schema.json
 Validate multiple schemas:
 
 ```bash
-python validate_schemas.py deeptools-schema.json sdscbundle-schema.json
+python validate_schemas.py sdscbundle-schema.json
 ```
 
 #### Example Output
 
 ```
-Validating 2 schema file(s):
-
-✓ deeptools-schema.json is a valid JSON Schema Draft 2020-12
-  Title: deepTools JSON Schema
-  Version: 1.2.1
-  Description: Complete JSON Schema for deepTools format
+Validating 1 schema file(s):
 
 ✓ sdscbundle-schema.json is a valid JSON Schema Draft 2020-12
   Title: SDSC Bundle JSON Schema
@@ -75,8 +70,8 @@ Validating 2 schema file(s):
   Description: JSON Schema for SDSC Bundle format
 
 Summary:
-  Total schemas: 2
-  Valid: 2
+  Total schemas: 1
+  Valid: 1
   Invalid: 0
 
 ✓ All schemas are valid!
@@ -99,9 +94,6 @@ python check_sdsc_json_files.py examples/*.json
 
 # Verbose output
 python check_sdsc_json_files.py -v examples/sdsc_0.json
-
-# Use deeptools schema
-python check_sdsc_json_files.py --schema deeptools-schema.json examples/sdsc_0.json
 
 # No color (CI/CD)
 python check_sdsc_json_files.py --no-color examples/*.json

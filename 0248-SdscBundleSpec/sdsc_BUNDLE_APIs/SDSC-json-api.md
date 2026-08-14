@@ -32,10 +32,6 @@ Each `dsc_` entry consists of some leaf (final) fields and a few composite (non-
 
 See [JSON-object-Hierarchy.md](JSON-object-Hierarchy.md) for the full hierarchy diagram.
 
-## Root Structure
-
-See [root-structure.md](root-structure.md) for details.
-
 ## SuperDsc Object
 
 See [superdsc-object.md](superdsc-object.md) for the complete field reference.
@@ -158,5 +154,5 @@ Specifies details of compute operation to be performed on the tensors at the dev
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: Object Hierarchy →](JSON-object-Hierarchy.md) |
+| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: SuperDsc Object →](superdsc-object.md) |
 |:--|:--:|--:|
