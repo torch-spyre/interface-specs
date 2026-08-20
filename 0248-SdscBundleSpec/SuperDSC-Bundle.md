@@ -217,7 +217,7 @@ The individual fields of the SuperDSC to express an operation and its core mappi
           * for LX, alpha=coordinate offset across slices, factor=number of slices in dimension
         * corelet fold: N/A → alpha=1, factor=1
         * row fold: N/A → alpha=1, factor=1
-      * **NOTE**: the tensor allocation need NOT be compatible with compute work division i.e, data in one core is directly available for compute in another core. The backend compiler will ensure proper data movement across cores. This functionality is not yet available in the backend, it will be implemented in a future iteration.
+      * **NOTE**: the tensor allocation need NOT be compatible with compute work division. For supported static affine LX mappings, the frontend can describe the pre-relayout and post-relayout states as an explicit `S1 -> SHUFFLE -> S2` operation. The normative contract and fallback requirements are defined in [LX Relayout SHUFFLE](LX-Relayout-SHUFFLE.md).
 * Symbolic information
   * Link dsc dimensions to symbols
     * `std::map<PrimaryDimTypes, std::vector<VariableSymbol>> dimToSymbolMapping_` in `sdsc.dscs_[0]`
@@ -326,6 +326,7 @@ OpFuncs are specified within sdsc.json as field `OpFuncs opFuncName` in `sdsc.ds
 |         | Q_FP8_CH  |   "qfp8ch"   | Input: DF16 Output: FP8<1,4,3> |  |  Quantize DL16 to FP8<1,4,3>. Pack elements from two input sticks in the same dimension as the input stick dimension, alternating every 8 elements
 |         | Q_FP8_MB  |   "qfp8mb"   | Input: DF16 Output: FP8<1,4,3> |  |  Quantize DL16 to FP8<1,4,3>. Pack elements from two input sticks in a dimension different from the input stick dimension, alternating every 8 elements
 |         | Q_FP8_WT  |   "qfp8wt"   | Input: DF16 Output: FP8<1,4,3> |  |  Quantize DL16 to FP8<1,4,3>. Pack elements from two input sticks in a dimension different from the input stick dimension, alternating after every element
+| Data shuffle | SHUFFLE | "shuffle" | Input and output formats must match | | Copy values between explicit static affine LX distributions without arithmetic. See [LX Relayout SHUFFLE](LX-Relayout-SHUFFLE.md).
 | Stick Altering Data shuffle | ReStickifyOpHBM | "ReStickifyOpHBM" | DF16 | | Change the stick composition from one dimension to another dimension. Only one dimension is allowed in input and output stick layouts.
 
 
