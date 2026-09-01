@@ -131,9 +131,9 @@ One ScheduleNode of type ALLOCATE needs to be added per tensor in LabeledDs. Onl
 | 5 | `padding_` | Padding type applicable for each dimension of the tensor that is padded. | One of NOPAD, LOWERED_PADDED, PADDED_NOZEROPAD, PADDED_WZEROPAD, PADDED_FULLSPAN, and PADDED_FULLSPAN_WUNNEEDED. See [Padding](padding.md) for more details. |
 | 6 | `layoutDimOrder_` | Order of dimensions on the device | Tensor layout specified from inner to outer. |
 | 7 | `maxDimSizes_` | Maximum size of each dimension of the tensor. | Generally set to -1. |
-| 8 | `isStartAddrSymbolic_` | 0 or 1 indicating whether the start addresses specified in `data_` field of `startAddressCoreCorelet_` are symbolic. | See [Folding](folding.md) |
-| 8 | `startAddressCoreCorelet_` | Start address of a tensor per core. | See [Folding](folding.md) |
-| 9 | `coordinates_` | Tensor coordinates per dimension. | See [Folding](folding.md) |
+| 8 | `isStartAddrSymbolic_` | 0 or 1 indicating whether the start addresses specified in `data_` field of `startAddressCoreCorelet_` are symbolic. | See [ScheduleTreeNode](scheduletreenode.md) |
+| 8 | `startAddressCoreCorelet_` | Start address of a tensor per core. | See [ScheduleTreeNode](scheduletreenode.md) |
+| 9 | `coordinates_` | Tensor coordinates per dimension. | See [ScheduleTreeNode](scheduletreenode.md) |
 | 10 | `backGapCore_` | Records extra empty space ("back gap") added at the end of a dimension in an allocated buffer, tracked independently for each core (or HBM). | The field is of the form: `"backGapCore" : { <dim string> : { <"core id"> \| "-1" : back gap size as a string} ....}`. A key of "-1" indicates that the specification is for HBM. If it is a core id, then the back gap is for the LX scratchpad of the core. |
 | 11 | `indirectAllocType_` | One of **no_indirection**, **index_tensor**, and **value_tensor** | **no_indirection** indicates an ordinary, directly-addressed allocation. **index_tensor** indicates the allocation holds indices used to look up into another tensor. **value_tensor** indicates the allocation holds the actual data that gets gathered/scattered via those indices. |
 | 12 | `relatedIndirectAccessAlloc_` | Provides the name of the tensor (allocate node in schedule tree) that provides actual data for the indirect reference when `indirectAllocType_` is **index_tensor**. | Non-empty only when `indirectAllocType_` is **index_tensor**. |

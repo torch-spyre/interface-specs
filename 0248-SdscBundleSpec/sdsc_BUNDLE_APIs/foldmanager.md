@@ -1,19 +1,17 @@
 # FoldManager
 
-A `FoldManager` encodes a multi-dimensional fold expression — it maps a tuple
-of loop indices (core, corelet, time step, …) to a concrete value such as a
-memory address, coordinate offset, or constant. It appears wherever the SDSC
-needs to express a value that varies per-core, per-corelet, or per-time-step
-without duplicating data for every combination.
+A `FoldManager` maps a tuple of loop indices (core, corelet, time step, …) to a
+concrete value such as a memory address, coordinate offset, or constant. It is
+the composite expression built from [`FoldProperty`](foldproperty.md) entries —
+see that page for the conceptual overview of folding.
 
-Each dimension in the fold has a **function** (`dim_prop_func`) that says
-*how* the index maps to a value (constant, lookup table, affine formula, or
-work-split), and an **attribute** (`dim_prop_attr`, a
+Each dimension in the fold has a **function** (`dim_prop_func`) that says *how*
+the index maps to a value, and an **attribute** (`dim_prop_attr`, a
 [`FoldProperty`](foldproperty.md)) that says *which* fold level the dimension
-belongs to and how many slices it has. The optional `data_` map holds the
-actual values, keyed by fold-coordinate tuples like `"[0, 1]"`.
+belongs to and how many slices it has. The optional `data_` map holds the actual
+values, keyed by fold-coordinate tuples like `"[0, 1]"`.
 
-## Context
+## Where Folding Appears
 
 `FoldManager` is used in five places across the schema:
 
@@ -25,8 +23,8 @@ actual values, keyed by fold-coordinate tuples like `"[0, 1]"`.
 | `ConstantInfo.data_` | Per-core constant values |
 | `FoldManager.data_` *(self)* | Nested fold data values |
 
-For the conceptual explanation of how folding works and worked examples, see
-[Folding](folding.md).
+For details on how `startAddressCoreCorelet_` and `coordinates_` are filled in
+practice, see [ScheduleTreeNode](scheduletreenode.md).
 
 ## Structure
 

@@ -14,7 +14,6 @@
 | SuperDsc Object | [superdsc-object.md](superdsc-object.md) |
 | Object Hierarchy | [JSON-object-Hierarchy.md](JSON-object-Hierarchy.md) |
 | Padding | [padding.md](padding.md) |
-| Folding | [folding.md](folding.md) |
 | FoldProperty | [foldproperty.md](foldproperty.md) |
 | FoldManager | [foldmanager.md](foldmanager.md) |
 | Stick Layout Constraints | [stick-layout-constraints.md](stick-layout-constraints.md) |
@@ -30,7 +29,7 @@
 | ComputeOperation | [computeoperation.md](computeoperation.md) |
 | ConstantInfo | [constantinfo.md](constantinfo.md) |
 | Complete Example (JSON) | [complete-example.md](complete-example.md) |
-| Schema Validation | [schema-validation.md](schema-validation.md) |
+| Schema Validation | [validation_bkp.mp](validation_bkp.mp) |
 | Error Handling | [error-handling.md](error-handling.md) |
 | Best Practices | [best-practices.md](best-practices.md) |
 | Reference Documents & Glossary | [reference.md](reference.md) |
