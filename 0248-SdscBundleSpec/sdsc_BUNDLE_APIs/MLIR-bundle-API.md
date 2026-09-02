@@ -472,5 +472,5 @@ This calculates a memory address by:
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: Bundle Usage Examples →](MLIR-bundle-usage-examples.md) |
+| [← Previous: Overview](Overview.md) | [↑ Table of Contents](README.md) | [Next: Bundle Usage Examples →](MLIR-bundle-usage-examples.md) |
 |:--|:--:|--:|

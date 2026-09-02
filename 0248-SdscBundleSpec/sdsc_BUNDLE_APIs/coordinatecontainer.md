@@ -65,5 +65,5 @@ It groups the coordinate info for all dimensions of a tensor alongside the core-
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: CoordinateInfo →](coordinateinfo.md) |
+| [← Previous: ScheduleTreeNode](scheduletreenode.md) | [↑ Table of Contents](README.md) | [Next: CoordinateInfo →](coordinateinfo.md) |
 |:--|:--:|--:|

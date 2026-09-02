@@ -30,7 +30,7 @@ reference individual tensors by the composite name
   "dsName_":     "<string>",
   "dsType_":     "INPUT" | "OUTPUT" | "KERNEL" | "KERNEL_IDX",
   "scale_":      [<number>, ...],
-  "wordLength":  <int>,
+  "wordLength":  <number>,
   "dataFormat_": "<format>",
   "memOrg_":     <MemoryOrganization>
 }
@@ -46,25 +46,35 @@ All five required fields must be present. No additional properties are allowed.
 | `dsName_` | string | Yes | — | Unique tensor name within the DSC. Compute operations reference this tensor as `"<dsName_>-idx<ldsIdx_>"` (e.g. `"convolution-Tensor0-idx0"`). |
 | `dsType_` | string enum | Yes | `"INPUT"` `"OUTPUT"` `"KERNEL"` `"KERNEL_IDX"` | Tensor role. Must match a type defined in `primaryDsInfo_` of the parent DSC. Sourced from torch_spyre `LAYOUT_INPUT_LABELS` / `LAYOUT_OUTPUT_LABELS`. |
 | `scale_` | array of number | No | One entry per dimension in `dsType_` order | Per-dimension scale factors in `layoutDimOrder_` order. `1` = normal size; `-1` = reduced / broadcast; `-2` = reduced / broadcast stick dimension. |
-| `wordLength` | integer | No | >= 1 | Element size in bytes (e.g. `2` for FP16). **Note:** field name lacks the trailing underscore used by all other fields — see [F8 note](#f8-note-on-wordlength-naming). |
+| `wordLength` | number | No | > 0 (exclusive) | Element size in bytes. Integer for full-byte formats (e.g. `2` for FP16); fractional for sub-byte formats (e.g. `0.5` for 4-bit types such as `SENINT4` and `SEN121_FP4`). **Note:** field name lacks the trailing underscore used by all other fields — see [F8 note](#f8-note-on-wordlength-naming). |
 | `dataFormat_` | string enum | Yes | see [Data Formats](#data-formats) | Numeric format of each tensor element. `SEN169_FP16` is the most common Spyre format. |
 | `memOrg_` | [MemoryOrganization](memoryorganization.md) | Yes | — | Memory residency — specifies which memories (HBM, LX scratchpad) hold this tensor. |
 
 ## Data Formats
 
-The schema enforces the following Spyre-validated subset. The full list of formats
-supported by the torch_spyre runtime (including `IEEE_FP32`, `BFLOAT16`,
-`SEN121_FP4`, `BOOL`, and others) is documented in
-[SDSC-json-api.md](SDSC-json-api.md).
-
 | Value | Description |
 |---|---|
 | `SEN169_FP16` | SEN169 16-bit floating point (most common for Spyre) |
-| `SEN169_BFP16` | SEN169 brain float 16 |
-| `SEN169_FP32` | SEN169 32-bit floating point |
-| `SEN169_INT8` | SEN169 8-bit integer |
-| `SEN169_INT16` | SEN169 16-bit integer |
-| `SEN169_INT32` | SEN169 32-bit integer |
+| `IEEE_FP32` | IEEE 754 32-bit floating point |
+| `IEEE_FP16` | IEEE 754 16-bit floating point |
+| `BFLOAT16` | Brain float 16 |
+| `BOOL` | Boolean |
+| `SEN143_FP8` | SEN143 8-bit floating point |
+| `SEN152_FP8` | SEN152 8-bit floating point |
+| `SEN153_FP9` | SEN153 9-bit floating point |
+| `SEN18F_FP24` | SEN18F 24-bit floating point |
+| `SEN080_FP8` | SEN080 8-bit floating point |
+| `SEN053_FP8` | SEN053 8-bit floating point |
+| `SEN121_FP4` | SEN121 4-bit floating point |
+| `SENINT2` | SEN 2-bit integer |
+| `SENINT4` | SEN 4-bit integer |
+| `SENINT8` | SEN 8-bit integer |
+| `SENINT16` | SEN 16-bit integer |
+| `SENINT24` | SEN 24-bit integer |
+| `SENUINT2` | SEN 2-bit unsigned integer |
+| `SENUINT32` | SEN 32-bit unsigned integer |
+| `IEEE_INT32` | IEEE 32-bit signed integer |
+| `IEEE_INT64` | IEEE 64-bit signed integer |
 
 ## F8 Note on `wordLength` Naming
 
@@ -109,5 +119,5 @@ same tensor is referenced by name in `computeOp_`.
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: MemoryOrganization →](memoryorganization.md) |
+| [← Previous: DesignSpaceConfig](designspaceconfig.md) | [↑ Table of Contents](README.md) | [Next: MemoryOrganization →](memoryorganization.md) |
 |:--|:--:|--:|

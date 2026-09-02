@@ -19,7 +19,7 @@ All five fields are required. No additional properties are allowed.
   "spatial":  <int>,
   "temporal": <int>,
   "elemArr":  <int>,
-  "padding":  "nopad" | "pad",
+  "padding":  "nopad" | "lowered_padded" | "padded_nozeropad" | "padded_wzeropad" | "padded_fullspan" | "padded_fullspan_wunneeded",
   "folds":    <FoldManager>
 }
 ```
@@ -31,7 +31,7 @@ All five fields are required. No additional properties are allowed.
 | `spatial` | integer | Yes | >= 0 | Spatial memory hierarchy level. Encodes how this dimension is distributed across cores (the spatial dimension of the Spyre memory model). |
 | `temporal` | integer | Yes | >= 0 | Temporal memory hierarchy level. Encodes how this dimension maps to time steps / LX scratchpad staging passes. |
 | `elemArr` | integer | Yes | >= 0 | Element array level. Encodes the position of this dimension within a stick (the innermost element-array dimension). |
-| `padding` | string | Yes | `"nopad"` or `"pad"` | Whether this dimension is padded in the allocated buffer. Use `"pad"` when the dimension has padding applied (see [Padding](padding.md)); `"nopad"` otherwise. |
+| `padding` | string | Yes | `"nopad"`, `"lowered_padded"`, `"padded_nozeropad"`, `"padded_wzeropad"`, `"padded_fullspan"`, or `"padded_fullspan_wunneeded"` | Padding state for this dimension in the allocated buffer. `"nopad"` = no padding; `"lowered_padded"` = padding collapsed into a lowered layout; `"padded_nozeropad"` = padded but region is not zeroed; `"padded_wzeropad"` = padded and region is zero-filled; `"padded_fullspan"` = full-span padding; `"padded_fullspan_wunneeded"` = full-span padding with unneeded pad elements. See [Padding](padding.md). |
 | `folds` | [FoldManager](foldmanager.md) | Yes | — | Defines how the coordinate value for this dimension is computed per core and time step using affine or constant fold functions. |
 
 ## Example
@@ -61,5 +61,5 @@ to a single level), has no padding, and uses a constant fold function with a fac
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: LabeledDataStructure →](labeleddatastructure.md) |
+| [← Previous: CoordinateContainer](coordinatecontainer.md) | [↑ Table of Contents](README.md) | [Next: ComputeOperation →](computeoperation.md) |
 |:--|:--:|--:|

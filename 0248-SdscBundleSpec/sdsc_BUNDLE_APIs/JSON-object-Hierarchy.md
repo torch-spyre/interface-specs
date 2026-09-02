@@ -179,5 +179,5 @@ Root Object (Dynamic operation name key, e.g., "exp", "matmul")
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: Padding →](padding.md) |
+| [← Previous: SDSC JSON API](SDSC-json-api.md) | [↑ Table of Contents](README.md) | [Next: SuperDsc Object →](superdsc-object.md) |
 |:--|:--:|--:|

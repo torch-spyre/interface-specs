@@ -45,18 +45,33 @@ All three fields are required. No additional properties are allowed.
 
 ## Data Formats
 
-The schema enforces the following Spyre-validated subset. The full list of formats
-supported by the torch-spyre runtime is documented in
-[SDSC-json-api.md](SDSC-json-api.md).
+The `dataFormat_` enum for `ConstantInfo` is identical to the one used by
+[`LabeledDataStructure.dataFormat_`](labeleddatastructure.md). All values below
+are accepted by the schema.
 
 | Value | Description |
 |---|---|
 | `SEN169_FP16` | SEN169 16-bit floating point (most common for Spyre) |
-| `SEN169_BFP16` | SEN169 brain float 16 |
-| `SEN169_FP32` | SEN169 32-bit floating point |
-| `SEN169_INT8` | SEN169 8-bit integer |
-| `SEN169_INT16` | SEN169 16-bit integer |
-| `SEN169_INT32` | SEN169 32-bit integer |
+| `IEEE_FP32` | IEEE 754 32-bit floating point |
+| `IEEE_FP16` | IEEE 754 16-bit floating point |
+| `BFLOAT16` | Brain float 16 |
+| `BOOL` | Boolean |
+| `SEN143_FP8` | SEN143 8-bit floating point |
+| `SEN152_FP8` | SEN152 8-bit floating point |
+| `SEN153_FP9` | SEN153 9-bit floating point |
+| `SEN18F_FP24` | SEN18F 24-bit floating point |
+| `SEN080_FP8` | SEN080 8-bit floating point |
+| `SEN053_FP8` | SEN053 8-bit floating point |
+| `SEN121_FP4` | SEN121 4-bit floating point |
+| `SENINT2` | SEN 2-bit integer |
+| `SENINT4` | SEN 4-bit integer |
+| `SENINT8` | SEN 8-bit integer |
+| `SENINT16` | SEN 16-bit integer |
+| `SENINT24` | SEN 24-bit integer |
+| `SENUINT2` | SEN 2-bit unsigned integer |
+| `SENUINT32` | SEN 32-bit unsigned integer |
+| `IEEE_INT32` | IEEE 32-bit signed integer |
+| `IEEE_INT64` | IEEE 64-bit signed integer |
 
 ## Example
 
@@ -87,5 +102,5 @@ core index 0, time-step index 0.
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: Complete Example (JSON) →](complete-example.md) |
+| [← Previous: ComputeOperation](computeoperation.md) | [↑ Table of Contents](README.md) | [Next: Complete Example (JSON) →](complete-example.md) |
 |:--|:--:|--:|

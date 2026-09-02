@@ -123,5 +123,5 @@ data-load DSC 0, no barrier before, no barrier after.
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: Object Hierarchy →](JSON-object-Hierarchy.md) |
+| [← Previous: Object Hierarchy](JSON-object-Hierarchy.md) | [↑ Table of Contents](README.md) | [Next: FoldProperty →](foldproperty.md) |
 |:--|:--:|--:|

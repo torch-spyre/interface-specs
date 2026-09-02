@@ -53,5 +53,5 @@
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: Reference →](reference.md) |
+| [← Previous: Error Handling](error-handling.md) | [↑ Table of Contents](README.md) | [Next: Reference →](reference.md) |
 |:--|:--:|--:|

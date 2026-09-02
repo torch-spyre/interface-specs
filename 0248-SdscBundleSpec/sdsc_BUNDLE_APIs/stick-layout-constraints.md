@@ -141,5 +141,5 @@ All other precision formats follow BatchMatmul constraints.
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: DesignSpaceConfig →](designspaceconfig.md) |
+| [← Previous: Padding](padding.md) | [↑ Table of Contents](README.md) | [Next: DesignSpaceConfig →](designspaceconfig.md) |
 |:--|:--:|--:|

@@ -60,5 +60,5 @@ splitting at that level (all cores see the same slice).
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: FoldManager →](foldmanager.md) |
+| [← Previous: SuperDsc Object](superdsc-object.md) | [↑ Table of Contents](README.md) | [Next: FoldManager →](foldmanager.md) |
 |:--|:--:|--:|

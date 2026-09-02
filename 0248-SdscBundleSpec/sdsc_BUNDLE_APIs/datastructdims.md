@@ -121,5 +121,5 @@ the full-size tile (2) and `el_` holds the smaller final tile (1):
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: DataStageParam →](datastageparam.md) |
+| [← Previous: PrimaryDsInfo](primarydsinfo.md) | [↑ Table of Contents](README.md) | [Next: DataStageParam →](datastageparam.md) |
 |:--|:--:|--:|

@@ -54,7 +54,7 @@ Six fields are required. No additional properties are allowed.
 | `N_` | [DataStructDims](datastructdims.md) | Yes | — | Total (un-tiled) tensor dimensions for this operation. |
 | `dimToSymbolMapping_` | map&lt;string, array&lt;string&gt;&gt; | No | Keys: dim names | Mapping from dimension names to symbolic variable names for symbolic dimension support. |
 | `coordinateMasking_` | object | No | — | Coordinate masking configuration for masked operations. |
-| `maskingConstId_` | integer | No | — | Index into `constantInfo_` of the masking constant. |
+| `maskingConstId_` | integer | No | >= -1 | Index into `constantInfo_` of the masking constant, or `-1` when the operation has no masking constant. `-1` is the default. |
 | `dataStageParam_` | map&lt;string, object&gt; | No | Keys: `^[0-9]+$` (core ID) | Data staging parameters per core. Each value has `ss_` (steady-state dimensions) and `el_` (epilogue dimensions). See [DataStageParam](datastageparam.md). |
 | `primaryDsInfo_` | map&lt;string, object&gt; | No | Keys: `^[A-Z_]+$` (dsType) | Per-tensor-type layout info. Each value has `layoutDimOrder_`, `stickDimOrder_`, and `stickSize_`. See [PrimaryDsInfo](primarydsinfo.md). |
 | `scheduleTree_` | array of [ScheduleTreeNode](scheduletreenode.md) | Yes | — | Ordered list of memory allocation and compute schedule nodes. |
@@ -97,5 +97,5 @@ A minimal 2-core GELU DSC showing required fields only:
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: DataStructDims →](datastructdims.md) |
+| [← Previous: Stick Layout Constraints](stick-layout-constraints.md) | [↑ Table of Contents](README.md) | [Next: LabeledDataStructure →](labeleddatastructure.md) |
 |:--|:--:|--:|

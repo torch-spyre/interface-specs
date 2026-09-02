@@ -54,5 +54,5 @@ Error: Number of slices (3) does not divide granularity (8)
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: Best Practices →](best-practices.md) |
+| [← Previous: Complete Example (JSON)](complete-example.md) | [↑ Table of Contents](README.md) | [Next: Best Practices →](best-practices.md) |
 |:--|:--:|--:|

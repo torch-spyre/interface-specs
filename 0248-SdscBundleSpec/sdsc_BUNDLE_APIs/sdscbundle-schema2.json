@@ -1,0 +1,835 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/torch-spyre/torch-spyre/sdscbundle-schema.json",
+  "title": "SDSC Bundle JSON Schema",
+  "description": "JSON Schema for SDSC Bundle format. This schema covers compute operations (SFP, matmul, BMM, identity) and data operations (transpose, slice).",
+  "version": "1.2.0",
+  "$comment": "Version History: v1.0.0 - Initial schema. v1.0.1 (2026-05-11) - Corrected dsType_ enum to match torch_spyre constants: INPUT, OUTPUT, KERNEL, KERNEL_IDX. v1.1.0 (2026-05-XX) - Added symbolic representation: SymbolicDimInfo def, DimPaddingSizes def, DataStructDims.symbolicDimInfo_/dims_/paddingSizes_, SuperDsc symbolic fields (dimToSymbolMappingOpcodeCorrection_, inputSymbolsAndTags_, symbolDefinitions_), DesignSpaceConfig.dimToSymbolMapping_, ScheduleTreeNode.isStartAddrSymbolic_. v1.1.1 (2026-07-07) - Allow isStartAddrSymbolic_ to accept integer 0/1 in addition to boolean false/true. v1.1.2 (2026-07-07) - Allow DataStructDims direct dimension fields to accept empty object {} in addition to integer >= 1. v1.2.0 (2026-07-08) - Sync DataStructDims/DimPaddingSizes/SymbolicDimInfo with deeptools-schema.json v1.3.0 (source: dsc/dims.h + dsc/dims.cpp exportJson()): DataStructDims: added explicit dim fields (in_, out_, mb_, i_, j_, ki_, kj_, x_, x1_, y_, r_, c_, ij_, rc_, kij_, sij_, zij_, si_, sj_, zi_, zj_), added coreletSplit_, rowSplit_, peSfpSplit_, maxSymbolicVolume_, removed spurious dims_ field. DimPaddingSizes: corrected frontPadding_->padFront_, backPadding_->padBack_, removed kernelDim_, added unneededPad_, unneededPadFront_, unneededPadBack_, totalSize_, dilation_, windowDim_. SymbolicDimInfo: corrected maxValue_->maxSize_. dataStageParam_ per-stage object: added name_ field.",
+  "type": "object",
+  "patternProperties": {
+    "^[a-zA-Z0-9_/\\-][a-zA-Z0-9_/\\-]*$": {
+      "$ref": "#/$defs/SuperDsc"
+    }
+  },
+  "additionalProperties": false,
+  "minProperties": 1,
+  "$defs": {
+    "SuperDsc": {
+      "type": "object",
+      "description": "Bundle-level configuration for multi-core accelerator operation.",
+      "required": ["coreFoldProp_", "coreletFoldProp_", "numCoresUsed_", "coreIdToDsc_", "coreIdToDscSchedule", "dscs_"],
+      "properties": {
+        "sdscFoldProps_": {
+          "type": "array",
+          "description": "SDSC-level fold properties",
+          "items": {"$ref": "#/$defs/FoldProperty"}
+        },
+        "sdscFolds_": {
+          "$ref": "#/$defs/FoldManager",
+          "description": "SDSC-level fold manager"
+        },
+        "coreFoldProp_": {
+          "$ref": "#/$defs/FoldProperty",
+          "description": "Core fold properties"
+        },
+        "coreletFoldProp_": {
+          "$ref": "#/$defs/FoldProperty",
+          "description": "Corelet fold properties"
+        },
+        "numCoresUsed_": {
+          "type": "integer",
+          "description": "Total number of cores used",
+          "minimum": 1
+        },
+        "dimToSymbolMappingOpcodeCorrection_": {
+          "type": "object",
+          "description": "Symbol mapping corrections for opcode generation",
+          "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {"type": "string"}
+          }
+        },
+        "inputSymbolsAndTags_": {
+          "type": "object",
+          "description": "Input symbols and their associated tags",
+          "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {"type": "string"}
+          }
+        },
+        "symbolDefinitions_": {
+          "type": "object",
+          "description": "Variable definitions for symbolic dimensions"
+        },
+        "debug_handle_": {
+          "description": "Source-to-kernel provenance for this SuperDsc, emitted by the frontend. null is a normal value, not missing data. Not read by the deeptools loader -- it exists for tooling that maps a kernel back to its source. See DebugHandle.",
+          "oneOf": [
+            {"$ref": "#/$defs/DebugHandle"},
+            {"type": "null"}
+          ]
+        },
+        "datadscs_": {
+          "type": "array",
+          "description": "Data-operation DSCs (transpose, slice, ...) attached to this SuperDsc. Emitted by the frontend only when symbolic dims are present, always as an empty array; the loader imports each element as a DataOpDsc. Element contents are outside this curated set.",
+          "items": {"type": "object"}
+        },
+        "coreIdToDsc_": {
+          "type": "object",
+          "description": "Mapping from core ID to DSC index",
+          "patternProperties": {
+            "^[0-9]+$": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "numWkSlicesPerDim_": {
+          "type": "object",
+          "description": "Number of work slices per dimension",
+          "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "coreIdToWkSlice_": {
+          "type": "object",
+          "description": "Mapping from core ID to work slice indices",
+          "patternProperties": {
+            "^[0-9]+$": {
+              "type": "object",
+              "patternProperties": {
+                "^[A-Za-z_][A-Za-z0-9_]*$": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        },
+        "coreIdToDscSchedule": {
+          "type": "object",
+          "description": "Per-core execution schedule. Each value is an array of step tuples [datadsc_idx, dldsc_idx, before_sync, after_sync]: data DSC index, data-load DSC index, barrier before step (0=none), barrier after step (0=none).",
+          "patternProperties": {
+            "^[0-9]+$": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "description": "Step tuple: [datadsc_idx, dldsc_idx, before_sync, after_sync]",
+                "minItems": 4,
+                "maxItems": 4,
+                "items": {"type": "integer"}
+              }
+            }
+          }
+        },
+        "dscs_": {
+          "type": "array",
+          "description": "Array of Design Space Configurations",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/WrappedDesignSpaceConfig"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "DebugHandle": {
+      "type": "object",
+      "description": "Source-to-kernel provenance handle, nestable to mirror MLIR locations. Produced by the frontend's DebugHandle serializer. A null source or aten_op is a normal value: when an op fuses origins from several source lines there is no single headline, and the full set is preserved in fused_from.",
+      "required": ["id", "source", "aten_op", "ir_chain", "fused_from", "transform_history"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Handle id. Serialized as a string because a 63-bit value exceeds JS Number.MAX_SAFE_INTEGER and would be rounded by JSON.parse."
+        },
+        "source": {
+          "description": "Headline source location, or null when the op fuses several origins.",
+          "oneOf": [
+            {"$ref": "#/$defs/SourceLoc"},
+            {"type": "null"}
+          ]
+        },
+        "aten_op": {
+          "description": "Originating ATen op name, or null when the op fuses several origins.",
+          "oneOf": [
+            {"type": "string"},
+            {"type": "null"}
+          ]
+        },
+        "ir_chain": {
+          "type": "array",
+          "description": "Lowering lineage, outermost first.",
+          "items": {"type": "string"}
+        },
+        "fused_from": {
+          "type": "array",
+          "description": "Handles this one was fused from. Recursive.",
+          "items": {"$ref": "#/$defs/DebugHandle"}
+        },
+        "transform_history": {
+          "type": "array",
+          "description": "Structured lower-IR rewrites applied to this op.",
+          "items": {"$ref": "#/$defs/ProvenanceTransform"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "SourceLoc": {
+      "type": "object",
+      "description": "Structured source location. Field names mirror MLIR FileLineColRange so a future KTIR migration maps 1:1.",
+      "required": ["file", "start_line", "start_col", "end_line", "end_col"],
+      "properties": {
+        "file": {"type": "string"},
+        "start_line": {"type": "integer"},
+        "start_col": {"type": "integer"},
+        "end_line": {"oneOf": [{"type": "integer"}, {"type": "null"}]},
+        "end_col": {"oneOf": [{"type": "integer"}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    },
+    "ProvenanceTransform": {
+      "type": "object",
+      "description": "One structured lower-IR transformation in a provenance history.",
+      "required": ["kind", "pass_name", "reason"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["rewrite", "fusion", "decomposition", "clone", "remap"]
+        },
+        "pass_name": {"type": "string"},
+        "reason": {"oneOf": [{"type": "string"}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    },
+    "FoldProperty": {
+      "type": "object",
+      "description": "Pairs a fold factor with a memory hierarchy level label. Used in SuperDsc (coreFoldProp_, coreletFoldProp_, sdscFoldProps_) and FoldManager (dim_prop_attr) to describe how data is partitioned across cores, corelets, and time steps.",
+      "required": ["factor_", "label_"],
+      "properties": {
+        "factor_": {
+          "type": "integer",
+          "description": "Iteration extent of this fold dimension: legal indices are 0 .. factor_-1, and FoldManager::isLegal errors on any index >= factor_. 1 = no splitting. Minimum 1 is therefore correct -- factor_ 0 admits no index at all, so the dimension cannot be read. Known frontend bug: elem_arr_1 is emitted as a whole-stick count (size divided by elements-per-stick, rounding down), which underflows to 0 for a dimension smaller than one stick -- but factor_ is an index extent, so it must round up. The gather/scatter fixtures under dxp/test carry the bad value and fail validation until the frontend is corrected.",
+          "minimum": 1
+        },
+        "label_": {
+          "type": "string",
+          "description": "Memory hierarchy level name (e.g. 'core', 'corelet', 'time', 'core_fold', 'elem_arr_0')."
+        }
+      },
+      "additionalProperties": false
+    },
+    "FoldManager": {
+      "type": "object",
+      "description": "Encodes a multi-dimensional fold expression mapping loop index tuples (core, corelet, time step) to concrete values (addresses, coordinates, constants). Used in SuperDsc.sdscFolds_, ScheduleTreeNode.startAddressCoreCorelet_, CoordinateInfo.folds, and ConstantInfo.data_.",
+      "required": ["dim_prop_func", "dim_prop_attr"],
+      "properties": {
+        "dim_prop_func": {
+          "type": "array",
+          "description": "One fold function per dimension (same length as dim_prop_attr). Each element is a single-key object: Const (same value for all indices), Map (lookup in data_), Affine (alpha*index+beta), or WkSplit (work-slice index from coreIdToWkSlice_).",
+          "items": {
+            "type": "object",
+            "properties": {
+              "Const": {"type": "object"},
+              "Map": {"type": "object"},
+              "Affine": {
+                "type": "object",
+                "properties": {
+                  "alpha_": {"type": "integer", "description": "Affine scale factor"},
+                  "beta_": {"type": "integer", "description": "Affine offset"}
+                }
+              },
+              "WkSplit": {"type": "object"}
+            }
+          }
+        },
+        "dim_prop_attr": {
+          "type": "array",
+          "description": "One FoldProperty per dimension (same length as dim_prop_func). Gives the fold level label and factor for each dimension.",
+          "items": {"$ref": "#/$defs/FoldProperty"}
+        },
+        "data_": {
+          "type": "object",
+          "description": "Lookup table keyed by fold-coordinate tuples (e.g. '[0, 1]'). Values are strings (symbolic or numeric addresses), integers, or arrays of integers. Only needed when dim_prop_func contains Map or Const entries.",
+          "patternProperties": {
+            "^\\[[0-9, ]+\\]$": {
+              "oneOf": [
+                {"type": "string"},
+                {"type": "integer"},
+                {"type": "array", "items": {"type": "integer"}}
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "WrappedDesignSpaceConfig": {
+      "description": "DSC wrapped in operation name key - used in dscs_ array",
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z0-9_/\\-][a-zA-Z0-9_/\\-]*$": {
+          "$ref": "#/$defs/DesignSpaceConfig"
+        }
+      },
+      "additionalProperties": false,
+      "minProperties": 1,
+      "maxProperties": 1
+    },
+    "DesignSpaceConfig": {
+      "type": "object",
+      "description": "Complete description of a single compute configuration executed by one or more Spyre cores. Holds tensor dimensions, tensor descriptors, memory allocation schedule, and compute operations. Appears as the value of each entry in SuperDsc.dscs_.",
+      "required": ["numCoresUsed_", "coreIdsUsed_", "N_", "computeOp_", "labeledDs_", "scheduleTree_"],
+      "properties": {
+        "numCoresUsed_": {
+          "type": "integer",
+          "description": "Number of Spyre cores used by this DSC. Must match the length of coreIdsUsed_.",
+          "minimum": 1
+        },
+        "numCoreletsUsed_": {
+          "type": "integer",
+          "description": "Number of corelets used.",
+          "minimum": 1
+        },
+        "coreIdsUsed_": {
+          "type": "array",
+          "description": "IDs of the cores that execute this DSC. Length must equal numCoresUsed_.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "N_": {
+          "$ref": "#/$defs/DataStructDims",
+          "description": "Total (un-tiled) tensor dimensions for this operation."
+        },
+        "dimToSymbolMapping_": {
+          "type": "object",
+          "description": "Mapping from dimensions to symbolic variables",
+          "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        },
+        "coordinateMasking_": {
+          "type": "object",
+          "description": "Coordinate masking configuration for masked operations."
+        },
+        "maskingConstId_": {
+          "type": "integer",
+          "description": "Index into constantInfo_ of the masking constant, or -1 when the operation has none. -1 is DesignSpaceConfig::maskingConstId_'s default and is the common case.",
+          "minimum": -1
+        },
+        "pdsRelation_": {
+          "type": "object",
+          "description": "Relationships between the primary data structures. Emitted by the frontend for pool/window ops and read by DesignSpaceConfig::importJsonObj.",
+          "properties": {
+            "isPdsReuse": {
+              "type": "integer",
+              "enum": [0, 1],
+              "description": "1 = the input and output primary data structures share storage."
+            }
+          },
+          "additionalProperties": false
+        },
+        "dataStageParam_": {
+          "type": "object",
+          "description": "Data staging parameters per core. Each value has ss_ (steady-state dimensions) and el_ (epilogue dimensions).",
+          "patternProperties": {
+            "^[0-9]+$": {
+              "type": "object",
+              "required": ["ss_", "el_"],
+              "properties": {
+                "name_": {
+                  "type": "string",
+                  "description": "Stage name",
+                  "enum": ["core", "corelet", "row"]
+                },
+                "ss_": {
+                  "$ref": "#/$defs/DataStructDims",
+                  "description": "Stage size dimensions"
+                },
+                "el_": {
+                  "$ref": "#/$defs/DataStructDims",
+                  "description": "Element dimensions"
+                }
+              }
+            }
+          }
+        },
+        "primaryDsInfo_": {
+          "type": "object",
+          "description": "Physical memory layout per tensor role (INPUT, OUTPUT, KERNEL, KERNEL_IDX). Each key is an uppercase tensor-role label; the value is a PrimaryDsInfo object specifying layout order, stick dimensions, and stick sizes. Keys must match dsType_ values used in labeledDs_.",
+          "patternProperties": {
+            "^[A-Z_]+$": {
+              "type": "object",
+              "description": "Layout information for one tensor role. layoutDimOrder_ lists dimensions outermost-first; stickDimOrder_ and stickSize_ are parallel arrays defining the innermost contiguous storage tile.",
+              "properties": {
+                "layoutDimOrder_": {
+                  "type": "array",
+                  "description": "Ordered list of dimension names describing how the tensor is laid out in memory, outermost first. Dimension names must match those declared in DataStructDims.",
+                  "items": {"type": "string"}
+                },
+                "stickDimOrder_": {
+                  "type": "array",
+                  "description": "The innermost contiguous dimensions that form a stick — the atomic unit of storage transfer. Must be a suffix subset of layoutDimOrder_. Parallel to stickSize_.",
+                  "items": {"type": "string"}
+                },
+                "stickSize_": {
+                  "type": "array",
+                  "description": "Size of each stick dimension in elements. Parallel to stickDimOrder_: stickSize_[i] is the element count for stickDimOrder_[i].",
+                  "items": {"type": "integer", "minimum": 1}
+                },
+                "stickRepl_": {
+                  "type": "array",
+                  "description": "Per-stick-dimension replication counts, parallel to stickDimOrder_. Emitted by the frontend for pool/window ops and read by DesignSpaceConfig::importJsonObj. Defaults to all-ones when absent.",
+                  "items": {"type": "integer", "minimum": 1}
+                }
+              }
+            }
+          }
+        },
+        "scheduleTree_": {
+          "type": "array",
+          "description": "Ordered list of memory allocation and compute schedule nodes.",
+          "items": {"$ref": "#/$defs/ScheduleTreeNode"}
+        },
+        "labeledDs_": {
+          "type": "array",
+          "description": "Descriptors for all tensors (input and output) used by this DSC.",
+          "items": {"$ref": "#/$defs/LabeledDataStructure"}
+        },
+        "constantInfo_": {
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "Named constants used by the operation, keyed by string integer index.",
+              "patternProperties": {
+                "^[0-9]+$": {"$ref": "#/$defs/ConstantInfo"}
+              }
+            },
+            {
+              "type": "string",
+              "description": "Set to the string '{}' when the operation has no constants.",
+              "enum": ["{}"]
+            }
+          ]
+        },
+        "computeOp_": {
+          "type": "array",
+          "description": "Compute operations to execute. More than one entry when operations are fused.",
+          "items": {"$ref": "#/$defs/ComputeOperation"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "DataStructDims": {
+      "type": "object",
+      "description": "Data structure dimensions. Serialized by DataStructDims::exportJson() in dsc/dims.cpp. All numeric dim values are doubles (default -1 = unset). Primary dims (in_, out_, mb_, i_, j_, ki_, kj_, x_, x1_, y_) are always serialized. Deprecated dims (r_, c_, ij_, rc_, kij_, sij_, zij_, si_, sj_, zi_, zj_) are serialized unless skipDeprecatedFields=true.",
+      "properties": {
+        "name_": {
+          "type": "string",
+          "description": "Dimension set name"
+        },
+        "in_": {"type": "number", "description": "Input features (or channels). -1 = unset."},
+        "out_": {"type": "number", "description": "Output features (or channels). -1 = unset."},
+        "mb_": {"type": "number", "description": "Minibatch size. -1 = unset."},
+        "i_": {"type": "number", "description": "Output image rows (derived). -1 = unset."},
+        "j_": {"type": "number", "description": "Output image cols (derived). -1 = unset."},
+        "ki_": {"type": "number", "description": "Kernel rows (derived). -1 = unset."},
+        "kj_": {"type": "number", "description": "Kernel cols (derived). -1 = unset."},
+        "x_": {"type": "number", "description": "Repeat dim that does not add reuse (e.g. attention heads). -1 = unset."},
+        "x1_": {"type": "number", "description": "Additional repeat dim (e.g. attention heads). -1 = unset."},
+        "y_": {"type": "number", "description": "Kernel reuse dimension (e.g. timestep). -1 = unset."},
+        "r_": {"type": "number", "description": "[deprecated] Input image rows with zero padding. -1 = unset."},
+        "c_": {"type": "number", "description": "[deprecated] Input image cols with zero padding. -1 = unset."},
+        "ij_": {"type": "number", "description": "[deprecated] Output image dimensions rows/cols. -1 = unset."},
+        "rc_": {"type": "number", "description": "[deprecated] Input image rows/cols with zero padding. -1 = unset."},
+        "kij_": {"type": "number", "description": "[deprecated] Kernel dimensions rows/cols. -1 = unset."},
+        "sij_": {"type": "number", "description": "[deprecated] Stride dimensions rows/cols. -1 = unset."},
+        "zij_": {"type": "number", "description": "[deprecated] Zero pad dimensions rows/cols. -1 = unset."},
+        "si_": {"type": "number", "description": "[deprecated] Stride along rows. -1 = unset."},
+        "sj_": {"type": "number", "description": "[deprecated] Stride along cols. -1 = unset."},
+        "zi_": {"type": "number", "description": "[deprecated] Zero pad rows. -1 = unset."},
+        "zj_": {"type": "number", "description": "[deprecated] Zero pad cols. -1 = unset."},
+        "symbolicDimInfo_": {
+          "type": "object",
+          "description": "Per-dimension symbolic size info. Keys are primary dim names (e.g. 'in_', 'mb_'); values are SymbolicDimInfo objects.",
+          "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {
+              "$ref": "#/$defs/SymbolicDimInfo"
+            }
+          }
+        },
+        "maxSymbolicVolume_": {
+          "type": "object",
+          "description": "Maximum combined symbolic volume for a set of symbolic dims. Keys are dim-set arrays encoded as strings (e.g. '[\"in_\",\"mb_\"]'); values are integer max volumes.",
+          "additionalProperties": {"type": "integer"}
+        },
+        "coreletSplit_": {
+          "type": "object",
+          "description": "Per-dimension explicit work split across corelets. Keys are primary dim names; values are arrays of integer work sizes, one entry per corelet.",
+          "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {
+              "type": "array",
+              "items": {"type": "integer"}
+            }
+          }
+        },
+        "rowSplit_": {
+          "type": "object",
+          "description": "Per-dimension, per-corelet explicit work split across PT rows. Keys are primary dim names; values are objects keyed by corelet id (numeric string) whose values are arrays of integer work sizes per PT row.",
+          "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {
+              "type": "object",
+              "patternProperties": {
+                "^[0-9]+$": {
+                  "type": "array",
+                  "items": {"type": "integer"}
+                }
+              }
+            }
+          }
+        },
+        "peSfpSplit_": {
+          "type": "object",
+          "description": "Per-dimension, per-corelet work split between PE and SFP components. Keys are primary dim names; values are objects keyed by corelet id (numeric string) whose values are objects mapping component name (e.g. 'pe', 'sfp') to integer work size.",
+          "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {
+              "type": "object",
+              "patternProperties": {
+                "^[0-9]+$": {
+                  "type": "object",
+                  "additionalProperties": {"type": "integer"}
+                }
+              }
+            }
+          }
+        },
+        "paddingSizes_": {
+          "type": "object",
+          "description": "Per-dimension padding information. Keys are primary dim names (e.g. 'r_', 'c_'); values are DimPaddingSizes objects.",
+          "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {
+              "$ref": "#/$defs/DimPaddingSizes"
+            }
+          }
+        }
+      }
+    },
+    "ScheduleTreeNode": {
+      "type": "object",
+      "description": "One step in the ordered execution plan for a DesignSpaceConfig. Each node allocates a tensor in a specific memory component. Nodes are linked by prev_ to form a dependency chain and reference tensors via ldsIdx_ into labeledDs_.",
+      "required": ["nodeType_", "name_"],
+      "properties": {
+        "nodeType_": {
+          "type": "string",
+          "description": "Type of schedule node. Currently only 'allocate' is supported.",
+          "enum": ["allocate"]
+        },
+        "name_": {
+          "type": "string",
+          "description": "Unique identifier for this node within the scheduleTree_ array. Referenced by other nodes via prev_."
+        },
+        "prev_": {
+          "type": "string",
+          "description": "Name of the predecessor node, establishing execution ordering. Omit for the first node in the tree."
+        },
+        "ldsIdx_": {
+          "type": "integer",
+          "description": "Zero-based index into the parent labeledDs_ array identifying which tensor this node allocates. See LabeledDataStructure.",
+          "minimum": 0
+        },
+        "component_": {
+          "type": "string",
+          "description": "Target memory component for the allocation. 'hbm' = high-bandwidth memory; 'lx' = LX scratchpad.",
+          "enum": ["hbm", "lx"]
+        },
+        "layoutDimOrder_": {
+          "type": "array",
+          "description": "Physical memory layout order for this allocation, outermost first. Overrides the global primaryDsInfo_ layout when present.",
+          "items": {"type": "string"}
+        },
+        "maxDimSizes_": {
+          "type": "array",
+          "description": "Maximum element count per dimension, parallel to layoutDimOrder_. Used to size the allocated buffer.",
+          "items": {"type": "integer"}
+        },
+        "isStartAddrSymbolic_": {
+          "description": "When true, start addresses are expressed as symbolic values rather than concrete byte offsets. Written by the backend compiler when symbolic addressing is required. Accepts boolean true/false or integer 1/0.",
+          "oneOf": [
+            {"type": "boolean"},
+            {"type": "integer", "enum": [0, 1]}
+          ]
+        },
+        "startAddressCoreCorelet_": {
+          "$ref": "#/$defs/FoldManager",
+          "description": "Per-core / per-corelet start address for this allocation, encoded as a FoldManager. See FoldManager for the full encoding."
+        },
+        "backGapCore_": {
+          "type": "object",
+          "description": "Back-gap size in elements per dimension per core. Written by the backend compiler when tensor.backGap is true. Outer key is a dimension name; inner key is a core ID (as a decimal string); value is the gap size as a decimal string.",
+          "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {
+              "type": "object",
+              "patternProperties": {
+                "^-?[0-9]+$": {"type": "string"}
+              }
+            }
+          }
+        },
+        "padding_": {
+          "type": "object",
+          "description": "Padding parameters for this allocation. Written by the backend compiler when the tensor requires memory padding beyond its logical size."
+        },
+        "indirectAllocType_": {
+          "type": "string",
+          "description": "Indirect allocation type tag. Present when this node participates in an indirect-access allocation pattern.",
+          "enum": ["no_indirection", "value_tensor", "index_tensor"]
+        },
+        "relatedIndirectAccessAlloc_": {
+          "type": "string",
+          "description": "Name of the related indirect-access allocation node. Must match another node's name_ field, linking this node to its paired indirect access entry."
+        },
+        "indexTensorType_": {
+          "type": "string",
+          "description": "How an index tensor's elements are interpreted: 'index' = element indices, 'address' = precomputed addresses. Emitted only when indirectAllocType_ is 'index_tensor'. Both values of AllocateNode::IndexTensorType (dsc/dsc2.h) are accepted, matching the loader.",
+          "enum": ["index", "address"]
+        },
+        "coordinates_": {
+          "type": "object",
+          "description": "Spatial tiling coordinates for this allocation. Groups per-dimension CoordinateInfo alongside the coreIdToWkSlice_ mapping. See CoordinateContainer.",
+          "properties": {
+            "coordInfo": {
+              "type": "object",
+              "description": "Per-dimension coordinate information. Keys are dimension names (pattern ^[a-z_][a-z0-9_]*$). Each value is a CoordinateInfo object.",
+              "patternProperties": {
+                "^[a-z_][a-z0-9_]*$": {
+                  "$ref": "#/$defs/CoordinateInfo"
+                }
+              }
+            },
+            "coreIdToWkSlice_": {
+              "type": "object",
+              "description": "Maps each core ID (as a string integer key) to a map of dimension name → work-slice index assigned to that core for that dimension."
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "CoordinateInfo": {
+      "type": "object",
+      "description": "Coordinate information for a dimension",
+      "required": ["spatial", "temporal", "elemArr", "padding", "folds"],
+      "properties": {
+        "spatial": {
+          "type": "integer",
+          "description": "Spatial level",
+          "minimum": 0
+        },
+        "temporal": {
+          "type": "integer",
+          "description": "Temporal level",
+          "minimum": 0
+        },
+        "elemArr": {
+          "type": "integer",
+          "description": "Element array level",
+          "minimum": 0
+        },
+        "padding": {
+          "type": "string",
+          "description": "Padding type, from the PadType enum (string mapping in EnumsConversion::padTypeToString).",
+          "enum": ["nopad", "lowered_padded", "padded_nozeropad",
+                   "padded_wzeropad", "padded_fullspan",
+                   "padded_fullspan_wunneeded"]
+        },
+        "folds": {
+          "$ref": "#/$defs/FoldManager",
+          "description": "Fold manager for this coordinate"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MemorySlot": {
+      "type": "object",
+      "description": "Memory slot presence and padding flags for a single memory type (HBM or LX).",
+      "required": ["isPresent"],
+      "properties": {
+        "isPresent":    {"type": "integer", "enum": [0, 1], "description": "1 = tensor resides in this memory, 0 = absent"},
+        "isPadded":     {"type": "integer", "enum": [0, 1], "description": "1 = allocation includes padding. See DimPaddingSizes for padding details."},
+        "isZeroPadded": {"type": "integer", "enum": [0, 1], "description": "1 = padded region is zero-filled. Only meaningful when isPadded is 1."},
+        "dsOffset":     {"type": "integer", "description": "Byte offset of this tensor within its allocation. Emitted alongside allocateNode_ for every non-depthwise op; part of the general memOrg contract."},
+        "allocateNode_": {"type": "string", "description": "Name of the ScheduleTreeNode that allocates this tensor in this memory. Must match that node's name_ field."}
+      },
+      "additionalProperties": false
+    },
+    "MemoryOrganization": {
+      "type": "object",
+      "description": "Memory residency specification for a tensor. Controls whether the tensor is allocated in High Bandwidth Memory (HBM), the per-core LX scratchpad, or both. Appears as memOrg_ inside LabeledDataStructure.",
+      "properties": {
+        "hbm": {"$ref": "#/$defs/MemorySlot", "description": "High Bandwidth Memory slot."},
+        "lx":  {"$ref": "#/$defs/MemorySlot", "description": "LX per-core local scratchpad slot."}
+      },
+      "additionalProperties": false
+    },
+    "LabeledDataStructure": {
+      "type": "object",
+      "description": "Labeled data structure definition. Describes a single physical tensor (input, output, kernel, or index tensor) used by a DesignSpaceConfig. Both input and output tensors must appear in labeledDs_. Referenced from ScheduleTreeNode.ldsIdx_ and from computeOp_ as '<dsName_>-idx<ldsIdx_>'.",
+      "required": ["ldsIdx_", "dsName_", "dsType_", "dataFormat_", "memOrg_"],
+      "properties": {
+        "ldsIdx_": {
+          "type": "integer",
+          "description": "Labeled data structure index",
+          "minimum": 0
+        },
+        "dsName_": {
+          "type": "string",
+          "description": "Unique tensor name within the DSC. Compute ops reference this tensor as '<dsName_>-idx<ldsIdx_>' (e.g. 'convolution-Tensor0-idx0')."
+        },
+        "dsType_": {
+          "type": "string",
+          "description": "Data structure type (from torch_spyre LAYOUT_INPUT_LABELS and LAYOUT_OUTPUT_LABELS)",
+          "enum": ["INPUT", "OUTPUT", "KERNEL", "KERNEL_IDX"]
+        },
+        "scale_": {
+          "type": "array",
+          "description": "Scale factors",
+          "items": {"type": "number"}
+        },
+        "wordLength": {
+          "type": "number",
+          "description": "Word length in bytes. Fractional for sub-byte formats: the 4-bit types (SENINT4, SEN121_FP4) carry 0.5, so this is a number rather than an integer. Must be > 0.",
+          "exclusiveMinimum": 0
+        },
+        "dataFormat_": {
+          "type": "string",
+          "description": "Data format. Values are the DataFormats enum names accepted by FromString<DataFormats>() in util/sendefs/sendefs.h; INVALID is excluded because it is that converter's error sentinel, not an input format.",
+          "enum": ["SEN169_FP16", "IEEE_FP32", "IEEE_FP16", "BFLOAT16", "BOOL",
+                   "SEN143_FP8", "SEN152_FP8", "SEN153_FP9", "SEN18F_FP24",
+                   "SEN080_FP8", "SEN053_FP8", "SEN121_FP4",
+                   "SENINT2", "SENINT4", "SENINT8", "SENINT16", "SENINT24",
+                   "SENUINT2", "SENUINT32", "IEEE_INT32", "IEEE_INT64"]
+        },
+        "memOrg_": {
+          "$ref": "#/$defs/MemoryOrganization",
+          "description": "Memory organization — specifies which memories (HBM, LX scratchpad) hold this tensor."
+        }
+      },
+      "additionalProperties": false
+    },
+    "ComputeOperation": {
+      "type": "object",
+      "description": "Describes a single compute op executed on the Spyre device. Appears in the computeOp_ array of DesignSpaceConfig. Tensor references in inputLabeledDs and outputLabeledDs use the '<dsName_>-idx<ldsIdx_>' composite key from LabeledDataStructure.",
+      "required": ["exUnit", "opFuncName", "inputLabeledDs", "outputLabeledDs"],
+      "properties": {
+        "exUnit": {
+          "type": "string",
+          "description": "Execution unit. 'sfp' = Spyre Floating Point unit; 'pt' = Processing Tile array.",
+          "enum": ["sfp", "pt"]
+        },
+        "opFuncName": {
+          "type": "string",
+          "description": "Operation function name as generated by torch-spyre. See https://torch-spyre.readthedocs.io/ for the full list."
+        },
+        "attributes_": {
+          "type": "object",
+          "description": "Optional operation attributes",
+          "properties": {
+            "dataFormat_": {
+              "type": "string",
+              "description": "Data format"
+            },
+            "fidelity_": {
+              "type": "string",
+              "description": "Computation fidelity, from the OpAttributes::Fidelity enum (string mapping in OpAttributes::fidelityToString).",
+              "enum": ["regular", "fast"]
+            }
+          }
+        },
+        "location": {
+          "type": "string",
+          "description": "Name of the loop the op executes in, from the LoopNames enum (string mapping in DesignSpaceConfig::loopNameToString). The loader accepts all 32 loop names, but only 'Inner' (the innermost loop) is supported in this curated set -- it is the only value the torch-spyre frontend emits.",
+          "enum": ["Inner"]
+        },
+        "inputLabeledDs": {
+          "type": "array",
+          "description": "Input tensor references from labeledDs_ using the '<dsName_>-idx<N>' naming convention.",
+          "items": {"type": "string"}
+        },
+        "outputLabeledDs": {
+          "type": "array",
+          "description": "Output tensor references from labeledDs_ using the '<dsName_>-idx<N>' naming convention.",
+          "items": {"type": "string"}
+        },
+        "indirectAccessIndexLabeledDs": {
+          "type": "array",
+          "description": "Index tensors for indirect access operations (gather/scatter). See ScheduleTreeNode.indirectAllocType_.",
+          "items": {"type": "string"}
+        },
+        "interimLabeledDs": {
+          "type": "array",
+          "description": "Intermediate tensors used within the operation, not exposed as inputs or outputs.",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "DimPaddingSizes": {
+      "type": "object",
+      "description": "Padding sizes for a single dimension. Source: struct DimPaddingSizes in dsc/dims.h; serialized by DataStructDims::exportJson() in dsc/dims.cpp.",
+      "properties": {
+        "padFront_": {"type": "integer", "description": "Front padding elements. Default 0."},
+        "padBack_": {"type": "integer", "description": "Back padding elements. Default 0."},
+        "unneededPad_": {"type": "integer", "description": "Total unneeded padding elements."},
+        "unneededPadFront_": {"type": "integer", "description": "Unneeded elements originating from padFront_."},
+        "unneededPadBack_": {"type": "integer", "description": "Unneeded elements originating from padBack_."},
+        "totalSize_": {
+          "description": "Computed total padded size. The string 'N/A' when windowDim_ is unset and padFront_ < 0.",
+          "oneOf": [
+            {"type": "integer"},
+            {"type": "string", "enum": ["N/A"]}
+          ]
+        },
+        "stride_": {"type": "integer", "minimum": 1, "description": "Stride. Default 1."},
+        "dilation_": {"type": "integer", "minimum": 1, "description": "Dilation. Default 1."},
+        "windowDim_": {"type": "string", "description": "Associated window primary dim name (e.g. 'kij_'). Uses primaryDimToString mapping."}
+      }
+    },
+    "SymbolicDimInfo": {
+      "type": "object",
+      "description": "Symbolic dimension info for runtime-variable dimensions. Source: struct SymbolicDimInfo in dsc/dims.h.",
+      "required": ["maxSize_", "granularity_"],
+      "properties": {
+        "maxSize_": {"type": "integer", "minimum": 1, "description": "Maximum value of this symbolic dimension."},
+        "granularity_": {"type": "integer", "minimum": 1, "description": "Step granularity of this symbolic dimension."}
+      },
+      "additionalProperties": false
+    },
+    "ConstantInfo": {
+      "type": "object",
+      "description": "Named typed constant used by a DesignSpaceConfig operation (e.g. scaling factor, clip bound). Value is encoded as a FoldManager so it can vary per-core or per-time-step. Appears as values of constantInfo_ in DesignSpaceConfig, keyed by string integer.",
+      "required": ["name_", "dataFormat_", "data_"],
+      "properties": {
+        "name_": {
+          "type": "string",
+          "description": "Unique constant name within the DSC (e.g. 'scaling_factor', 'eps'). Referenced by operations that consume it."
+        },
+        "dataFormat_": {
+          "type": "string",
+          "description": "Numeric format of the constant elements. Must match the data format of the tensors the constant is applied to. Same value set as LabeledDataStructure.dataFormat_ (see util/sendefs/sendefs.h FromString<DataFormats>()).",
+          "enum": ["SEN169_FP16", "IEEE_FP32", "IEEE_FP16", "BFLOAT16", "BOOL",
+                   "SEN143_FP8", "SEN152_FP8", "SEN153_FP9", "SEN18F_FP24",
+                   "SEN080_FP8", "SEN053_FP8", "SEN121_FP4",
+                   "SENINT2", "SENINT4", "SENINT8", "SENINT16", "SENINT24",
+                   "SENUINT2", "SENUINT32", "IEEE_INT32", "IEEE_INT64"]
+        },
+        "data_": {
+          "$ref": "#/$defs/FoldManager",
+          "description": "Constant value(s) encoded as a fold structure. Allows different values per-core or per-time-step."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

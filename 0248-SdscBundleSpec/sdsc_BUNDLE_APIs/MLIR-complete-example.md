@@ -74,5 +74,5 @@ This example demonstrates:
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: SDSC JSON API →](SDSC-json-api.md) |
+| [← Previous: Bundle Usage Examples](MLIR-bundle-usage-examples.md) | [↑ Table of Contents](README.md) | [Next: SDSC JSON API →](SDSC-json-api.md) |
 |:--|:--:|--:|

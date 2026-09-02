@@ -201,5 +201,5 @@ module {
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: Complete Example →](MLIR-complete-example.md) |
+| [← Previous: MLIR Bundle API](MLIR-bundle-API.md) | [↑ Table of Contents](README.md) | [Next: Complete Example →](MLIR-complete-example.md) |
 |:--|:--:|--:|

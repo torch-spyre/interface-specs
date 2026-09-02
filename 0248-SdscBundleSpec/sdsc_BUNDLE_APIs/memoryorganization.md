@@ -75,5 +75,5 @@ Both `hbm` and `lx` are optional keys; omitting a key is equivalent to
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: ComputeOperation →](computeoperation.md) |
+| [← Previous: LabeledDataStructure](labeleddatastructure.md) | [↑ Table of Contents](README.md) | [Next: PrimaryDsInfo →](primarydsinfo.md) |
 |:--|:--:|--:|

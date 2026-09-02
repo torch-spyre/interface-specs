@@ -46,6 +46,7 @@ in `startAddressCoreCorelet_`. Spatial tiling coordinates are captured in a
   "padding_":                  <object>,
   "indirectAllocType_":        "<string>",
   "relatedIndirectAccessAlloc_": "<string>",
+  "indexTensorType_":          "index" | "address",
   "coordinates_":              <CoordinateContainer>
 }
 ```
@@ -60,13 +61,14 @@ in `startAddressCoreCorelet_`. Spatial tiling coordinates are captured in a
 | `ldsIdx_` | integer | No | >= 0 | Zero-based index into the parent `labeledDs_` array identifying which tensor this node allocates. See [`LabeledDataStructure`](labeleddatastructure.md). |
 | `component_` | string enum | No | `"hbm"` or `"lx"` | Target memory component. `"hbm"` = high-bandwidth memory; `"lx"` = LX scratchpad. |
 | `layoutDimOrder_` | array of string | No | Dimension names declared in `DataStructDims` | Physical memory layout order, outermost first. Tensor layout is specified from inner to outer. Overrides the global `primaryDsInfo_` order when present. |
-| `maxDimSizes_` | array of integer | No | Parallel to `layoutDimOrder_`; each integer >= 1 | Maximum element count per dimension. Generally set to `-1`. |
+| `maxDimSizes_` | array of integer | No | Parallel to `layoutDimOrder_` | Maximum element count per dimension. No minimum is enforced; `-1` is the typical value when the size is not constrained. |
 | `isStartAddrSymbolic_` | boolean or integer (0/1) | No | `true`/`false` or `1`/`0` | When true (`1`), the `data_` values in `startAddressCoreCorelet_` are symbolic identifiers rather than concrete byte offsets. See [`startAddressCoreCorelet_`](#startaddresscorecorelet_) below. |
 | `startAddressCoreCorelet_` | [FoldManager](foldmanager.md) | No | — | Per-core / per-corelet start address for this allocation, expressed as a FoldManager. See [`startAddressCoreCorelet_`](#startaddresscorecorelet_) below. |
 | `backGapCore_` | `map<dim, map<coreId, string>>` | No | Written conditionally when `tensor.backGap` is true | Back-gap size (in elements) per dimension per core. Outer key is a dimension name (`^[A-Za-z_][A-Za-z0-9_]*$`); inner key is a core ID (`^-?[0-9]+$`, where `"-1"` denotes HBM); value is the gap size as a decimal string. |
 | `padding_` | object | No | — | Padding type for each padded dimension. One of `NOPAD`, `LOWERED_PADDED`, `PADDED_NOZEROPAD`, `PADDED_WZEROPAD`, `PADDED_FULLSPAN`, `PADDED_FULLSPAN_WUNNEEDED`. See [Padding](padding.md). |
 | `indirectAllocType_` | string | No | — | One of `no_indirection`, `index_tensor`, or `value_tensor`. `no_indirection` = ordinary direct allocation; `index_tensor` = holds indices for a gather/scatter; `value_tensor` = holds the data gathered/scattered via those indices. |
 | `relatedIndirectAccessAlloc_` | string | No | Must match another node's `name_`; non-empty only when `indirectAllocType_` is `"index_tensor"` | Name of the related allocation node that provides actual data for the indirect reference. |
+| `indexTensorType_` | string enum | No | `"index"` or `"address"`; only present when `indirectAllocType_` is `"index_tensor"` | How the index tensor's elements are interpreted: `"index"` = element indices; `"address"` = precomputed byte addresses. |
 | `coordinates_` | [CoordinateContainer](coordinatecontainer.md) | No | — | Spatial tiling coordinates for this allocation. Groups per-dimension [`CoordinateInfo`](coordinateinfo.md) alongside the `coreIdToWkSlice_` mapping. See [`coordinates_`](#coordinates_) below. |
 
 ## startAddressCoreCorelet_
@@ -128,7 +130,7 @@ across cores, corelets, rows, and the final leaf entities via its `folds`
 | `spatial` | typically `3` | Number of spatial split levels (core, corelet, row). |
 | `temporal` | `0` | Set to `0` by the frontend. |
 | `elemArr` | `1` or `2` | `1` for non-stick dimensions; `2` for stick dimensions. |
-| `padding` | `"nopad"` or `"pad"` | Whether padding is applied to this dimension. |
+| `padding` | `"nopad"`, `"lowered_padded"`, `"padded_nozeropad"`, `"padded_wzeropad"`, `"padded_fullspan"`, or `"padded_fullspan_wunneeded"` | Padding state for this dimension. `"nopad"` is the common case; see [CoordinateInfo](coordinateinfo.md) for the full enum and [Padding](padding.md) for semantics. |
 | `folds` | [FoldManager](foldmanager.md) | Encodes the dimension split hierarchy. |
 
 ### folds hierarchy
@@ -315,5 +317,5 @@ tensor in LX scratchpad with tiling coordinates.
 
 ---
 
-| [← Back to Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: CoordinateContainer →](coordinatecontainer.md) |
+| [← Previous: DataStageParam](datastageparam.md) | [↑ Table of Contents](README.md) | [Next: CoordinateContainer →](coordinatecontainer.md) |
 |:--|:--:|--:|
