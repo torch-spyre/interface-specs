@@ -1,0 +1,517 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 2600 2080"
+     width="2600" height="2080"
+     font-family="Helvetica,Arial,sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L0,7 L8,3.5 Z" fill="#57606a"/>
+    </marker>
+  </defs>
+
+  <!-- ── background ── -->
+  <rect width="2600" height="2080" fill="#ffffff"/>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       TITLE
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <text x="1300" y="36"
+        font-size="20" font-weight="600" fill="#1f2328"
+        text-anchor="middle">SDSC JSON File — Object Hierarchy</text>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       SHARED STYLE NOTES (inline on each element for maximum compatibility)
+         box stroke = none, rx=7 rounded corners
+         text fill = #ffffff (white on all coloured boxes)
+         edge = polyline, stroke #57606a 1.3px, marker-end arr
+  ══════════════════════════════════════════════════════════════════════════ -->
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       COLUMN LAYOUT  (x-centres)
+         Col A  (Fold details)       cx ≈ 160
+         Col B  (DebugHandle)        cx ≈ 450
+         Col C  (Root/SuperDsc)      cx ≈ 780
+         Col D  (DSC children)       cx ≈ 1090
+         Col E  (ScheduleTree)       cx ≈ 1390
+         Col F  (LabeledDs)          cx ≈ 1700
+         Col G  (ConstantInfo)       cx ≈ 1990
+         Col H  (ComputeOp)          cx ≈ 2280
+  ════════════════════════════════════════════════════════════════════ -->
+
+  <!-- ══════════════════════════════════════════════════════════
+       ROOT  (cx=780, y=62)
+  ══════════════════════════════════════════════════════════ -->
+  <g id="ROOT">
+    <rect x="630" y="60" width="233" height="46" rx="7" fill="#1f2328"/>
+    <text x="638" y="80"  font-size="12" fill="#ffffff" text-anchor="start">Root Object</text>
+    <text x="638" y="97"  font-size="10" fill="#ffffff" text-anchor="start">(operation key, e.g. "matmul")</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SUPERDSC  (cx=780, y=150)
+  ══════════════════════════════════════════════════════════ -->
+  <g id="SD">
+    <rect x="700" y="148" width="79" height="36" rx="7" fill="#2563a8"/>
+    <text x="708" y="171" font-size="13" font-weight="600" fill="#ffffff" text-anchor="start">SuperDsc</text>
+  </g>
+  <!-- ROOT → SD -->
+  <line x1="780" y1="106" x2="780" y2="148"
+        stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SUPERDSC CHILDREN ROW  y=250
+       FP(cx=130) FM(cx=310) CFP(cx=490) DH(cx=670) META(cx=870) DSCS(cx=1090)
+  ══════════════════════════════════════════════════════════ -->
+
+  <!-- fan bus: SD bottom → horizontal line at y=225 → drop to children -->
+  <polyline points="780,184 780,225 130,225 130,248"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <polyline points="780,184 780,225 310,225 310,248"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <polyline points="780,184 780,225 490,225 490,248"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <polyline points="780,184 780,225 785,225 785,248"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <polyline points="780,184 780,225 870,225 870,248"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <polyline points="780,184 780,225 1090,225 1090,248"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- FP -->
+  <g id="FP">
+    <rect x="50"  y="248" width="142" height="46" rx="7" fill="#57606a"/>
+    <text x="58"  y="267" font-size="11" fill="#ffffff" text-anchor="start">sdscFoldProps_</text>
+    <text x="58"  y="283" font-size="10" fill="#ffffff" text-anchor="start">Array&lt;FoldProperty&gt;</text>
+  </g>
+  <!-- FM -->
+  <g id="FM">
+    <rect x="230" y="248" width="89" height="46" rx="7" fill="#57606a"/>
+    <text x="238" y="267" font-size="11" fill="#ffffff" text-anchor="start">sdscFolds_</text>
+    <text x="238" y="283" font-size="10" fill="#ffffff" text-anchor="start">FoldManager</text>
+  </g>
+  <!-- CFP -->
+  <g id="CFP">
+    <rect x="410" y="248" width="102" height="46" rx="7" fill="#57606a"/>
+    <text x="418" y="267" font-size="11" fill="#ffffff" text-anchor="start">coreFoldProp_</text>
+    <text x="418" y="283" font-size="10" fill="#ffffff" text-anchor="start">FoldProperty</text>
+  </g>
+  <!-- DH -->
+  <g id="DH">
+    <rect x="705" y="248" width="135" height="46" rx="7" fill="#57606a"/>
+    <text x="713" y="267" font-size="11" fill="#ffffff" text-anchor="start">debug_handle_</text>
+    <text x="713" y="283" font-size="10" fill="#ffffff" text-anchor="start">DebugHandle | null</text>
+  </g>
+  <!-- META -->
+  <g id="META">
+    <rect x="790" y="248" width="113" height="58" rx="7" fill="#2563a8"/>
+    <text x="798" y="267" font-size="10" fill="#ffffff" text-anchor="start">numCoresUsed_</text>
+    <text x="798" y="281" font-size="10" fill="#ffffff" text-anchor="start">coreIdToDsc_</text>
+    <text x="798" y="295" font-size="10" fill="#ffffff" text-anchor="start">coreIdToWkSlice_</text>
+    <text x="798" y="309" font-size="10" fill="#ffffff" text-anchor="start">…</text>
+  </g>
+  <!-- DSCS -->
+  <g id="DSCS">
+    <rect x="980" y="248" width="221" height="46" rx="7" fill="#2563a8"/>
+    <text x="988" y="267" font-size="11" fill="#ffffff" text-anchor="start">dscs_[]</text>
+    <text x="988" y="283" font-size="10" fill="#ffffff" text-anchor="start">Array&lt;WrappedDesignSpaceConfig&gt;</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════════
+       COL A — FoldProperty + FoldManager details  (y=380+)
+  ══════════════════════════════════════════════════════════ -->
+
+  <!-- FPROP  (cx=130, y=380) -->
+  <g id="FPROP">
+    <rect x="30" y="380" width="135" height="58" rx="7" fill="#57606a"/>
+    <text x="38" y="398" font-size="11" fill="#ffffff" text-anchor="start">FoldProperty</text>
+    <text x="38" y="413" font-size="10" fill="#ffffff" text-anchor="start">─ factor_: integer</text>
+    <text x="38" y="427" font-size="10" fill="#ffffff" text-anchor="start">─ label_: string</text>
+  </g>
+  <!-- FP → FPROP -->
+  <line x1="130" y1="294" x2="130" y2="380"
+        stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- FMDET  (cx=310, y=380) -->
+  <g id="FMDET">
+    <rect x="195" y="380" width="300" height="72" rx="7" fill="#57606a"/>
+    <text x="203" y="398" font-size="11" fill="#ffffff" text-anchor="start">FoldManager</text>
+    <text x="203" y="413" font-size="10" fill="#ffffff" text-anchor="start">─ dim_prop_func[]: Const|Map|Affine|WkSplit</text>
+    <text x="203" y="427" font-size="10" fill="#ffffff" text-anchor="start">─ dim_prop_attr[]: FoldProperty[]</text>
+    <text x="203" y="441" font-size="10" fill="#ffffff" text-anchor="start">─ data_: Object</text>
+  </g>
+  <!-- FM → FMDET -->
+  <line x1="310" y1="294" x2="310" y2="380"
+        stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- ══════════════════════════════════════════════════════════
+       COL B — DebugHandle subtree  (cx=490-670, y=380+)
+  ══════════════════════════════════════════════════════════ -->
+
+  <!-- DHDET  (cx=490, y=380) -->
+  <g id="DHDET">
+    <rect x="510" y="380" width="208" height="72" rx="7" fill="#57606a"/>
+    <text x="518" y="398" font-size="11" fill="#ffffff" text-anchor="start">DebugHandle</text>
+    <text x="518" y="413" font-size="10" fill="#ffffff" text-anchor="start">─ id: string</text>
+    <text x="518" y="427" font-size="10" fill="#ffffff" text-anchor="start">─ aten_op: string | null</text>
+    <text x="518" y="441" font-size="10" fill="#ffffff" text-anchor="start">─ ir_chain: string[]</text>
+  </g>
+  <!-- Separate last line to fit -->
+  <text x="518" y="458" font-size="10" fill="#57606a" text-anchor="start">─ fused_from: DebugHandle[] ↺</text>
+
+  <!-- DH → DHDET -->
+  <polyline points="785,294 785,340 625,340 625,380"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- SL  (cx=430, y=530) -->
+  <g id="SL">
+    <rect x="460" y="510" width="155" height="72" rx="7" fill="#57606a"/>
+    <text x="468" y="528" font-size="11" fill="#ffffff" text-anchor="start">SourceLoc</text>
+    <text x="468" y="543" font-size="10" fill="#ffffff" text-anchor="start">─ file</text>
+    <text x="468" y="557" font-size="10" fill="#ffffff" text-anchor="start">─ start_line</text>
+    <text x="468" y="571" font-size="10" fill="#ffffff" text-anchor="start">─ start_col, end_line</text>
+  </g>
+  <!-- DHDET → SL (source) -->
+  <polyline points="625,452 625,490 545,490 545,510"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <text x="585" y="488" font-size="9" fill="#57606a" text-anchor="middle">source</text>
+
+  <!-- PT  (cx=745, y=530) -->
+  <g id="PT">
+    <rect x="645" y="510" width="195" height="72" rx="7" fill="#57606a"/>
+    <text x="653" y="528" font-size="11" fill="#ffffff" text-anchor="start">ProvenanceTransform</text>
+    <text x="653" y="543" font-size="10" fill="#ffffff" text-anchor="start">─ kind: rewrite|fusion|</text>
+    <text x="653" y="557" font-size="10" fill="#ffffff" text-anchor="start">  decomposition|clone|remap</text>
+    <text x="653" y="571" font-size="10" fill="#ffffff" text-anchor="start">─ pass_name, reason</text>
+  </g>
+  <!-- DHDET → PT (transform_history[]) -->
+  <polyline points="625,452 625,490 745,490 745,510"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <text x="685" y="488" font-size="9" fill="#57606a" text-anchor="middle">transform_history[]</text>
+
+  <!-- ══════════════════════════════════════════════════════════
+       WRAPPEDDSC + DESIGNSPACECONFIG  (cx=1090, y=340+)
+  ══════════════════════════════════════════════════════════ -->
+
+  <!-- WDSC  (cx=1090, y=340) -->
+  <g id="WDSC">
+    <rect x="970" y="340" width="175" height="46" rx="7" fill="#3b82d4"/>
+    <text x="978" y="359" font-size="11" fill="#ffffff" text-anchor="start">WrappedDesignSpaceConfig</text>
+    <text x="978" y="375" font-size="10" fill="#ffffff" text-anchor="start">(operation name wrapper)</text>
+  </g>
+  <!-- DSCS → WDSC -->
+  <line x1="1090" y1="294" x2="1090" y2="340"
+        stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- CONFIG  (cx=1090, y=434) -->
+  <g id="CONFIG">
+    <rect x="990" y="432" width="139" height="36" rx="7" fill="#3b82d4"/>
+    <text x="998" y="455" font-size="12" font-weight="600" fill="#ffffff" text-anchor="start">DesignSpaceConfig</text>
+  </g>
+  <!-- WDSC → CONFIG -->
+  <line x1="1090" y1="386" x2="1090" y2="432"
+        stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- ══════════════════════════════════════════════════════════
+       DESIGNSPACECONFIG CHILDREN  y=540
+       N_(cx=820) DIM2S(cx=1000) DSP(cx=1190) PDS(cx=1390)
+       ST(cx=1590) LDS(cx=1800) CI(cx=2010) COP(cx=2230)
+  ══════════════════════════════════════════════════════════ -->
+
+  <!-- fan bus from CONFIG bottom (1090,468) → horizontal bus y=510 → 8 drops -->
+  <polyline points="1090,468 1090,510 820,510 820,540"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <polyline points="1090,468 1090,510 1000,510 1000,540"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <polyline points="1090,468 1090,510 1190,510 1190,540"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <polyline points="1090,468 1090,510 1390,510 1390,540"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <polyline points="1090,468 1090,510 1590,510 1590,540"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <polyline points="1090,468 1090,510 1800,510 1800,540"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <polyline points="1090,468 1090,510 2010,510 2010,540"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <polyline points="1090,468 1090,510 2230,510 2230,540"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- N_  (cx=820, y=540) -->
+  <g id="N_">
+    <rect x="720" y="540" width="135" height="58" rx="7" fill="#3b82d4"/>
+    <text x="728" y="558" font-size="11" fill="#ffffff" text-anchor="start">N_: DataStructDims</text>
+    <text x="728" y="573" font-size="10" fill="#ffffff" text-anchor="start">─ name_: string</text>
+    <text x="728" y="587" font-size="10" fill="#ffffff" text-anchor="start">─ &lt;dim&gt;_: number</text>
+  </g>
+
+  <!-- DIM2S  (cx=1000, y=540) -->
+  <g id="DIM2S">
+    <rect x="900" y="540" width="131" height="58" rx="7" fill="#3b82d4"/>
+    <text x="908" y="556" font-size="10" fill="#ffffff" text-anchor="start">dimToSymbolMapping_</text>
+    <text x="908" y="570" font-size="10" fill="#ffffff" text-anchor="start">coordinateMasking_</text>
+    <text x="908" y="584" font-size="10" fill="#ffffff" text-anchor="start">pdsRelation_ …</text>
+  </g>
+
+  <!-- DSP  (cx=1190, y=540) -->
+  <g id="DSP">
+    <rect x="1090" y="540" width="182" height="84" rx="7" fill="#2d7a56"/>
+    <text x="1098" y="558" font-size="11" fill="#ffffff" text-anchor="start">dataStageParam_</text>
+    <text x="1098" y="573" font-size="10" fill="#ffffff" text-anchor="start">Object&lt;coreId → Object&gt;</text>
+    <text x="1098" y="587" font-size="10" fill="#ffffff" text-anchor="start">─ name_: core|corelet|row</text>
+    <text x="1098" y="601" font-size="10" fill="#ffffff" text-anchor="start">─ ss_: DataStructDims</text>
+    <text x="1098" y="615" font-size="10" fill="#ffffff" text-anchor="start">─ el_: DataStructDims</text>
+  </g>
+
+  <!-- PDS  (cx=1390, y=540) -->
+  <g id="PDS">
+    <rect x="1290" y="540" width="201" height="84" rx="7" fill="#7c5cd8"/>
+    <text x="1298" y="558" font-size="11" fill="#ffffff" text-anchor="start">primaryDsInfo_</text>
+    <text x="1298" y="573" font-size="10" fill="#ffffff" text-anchor="start">Object&lt;label → Object&gt;</text>
+    <text x="1298" y="587" font-size="10" fill="#ffffff" text-anchor="start">─ layoutDimOrder_[]</text>
+    <text x="1298" y="601" font-size="10" fill="#ffffff" text-anchor="start">─ stickDimOrder_[]</text>
+    <text x="1298" y="615" font-size="10" fill="#ffffff" text-anchor="start">─ stickSize_[], stickRepl_[]</text>
+  </g>
+
+  <!-- ST  (cx=1590, y=540) — Schedule tree header -->
+  <g id="ST">
+    <rect x="1490" y="540" width="168" height="46" rx="7" fill="#2d7a56"/>
+    <text x="1498" y="558" font-size="11" fill="#ffffff" text-anchor="start">scheduleTree_[]</text>
+    <text x="1498" y="574" font-size="10" fill="#ffffff" text-anchor="start">Array&lt;ScheduleTreeNode&gt;</text>
+  </g>
+
+  <!-- LDS  (cx=1800, y=540) — Labeled DS header -->
+  <g id="LDS">
+    <rect x="1700" y="540" width="195" height="46" rx="7" fill="#7c5cd8"/>
+    <text x="1708" y="558" font-size="11" fill="#ffffff" text-anchor="start">labeledDs_[]</text>
+    <text x="1708" y="574" font-size="10" fill="#ffffff" text-anchor="start">Array&lt;LabeledDataStructure&gt;</text>
+  </g>
+
+  <!-- CI  (cx=2010, y=540) -->
+  <g id="CI">
+    <rect x="1910" y="540" width="201" height="46" rx="7" fill="#7c5cd8"/>
+    <text x="1918" y="558" font-size="11" fill="#ffffff" text-anchor="start">constantInfo_</text>
+    <text x="1918" y="574" font-size="10" fill="#ffffff" text-anchor="start">Object&lt;index → ConstantInfo&gt;</text>
+  </g>
+
+  <!-- COP  (cx=2230, y=540) -->
+  <g id="COP">
+    <rect x="2130" y="540" width="168" height="46" rx="7" fill="#c0540a"/>
+    <text x="2138" y="558" font-size="11" fill="#ffffff" text-anchor="start">computeOp_[]</text>
+    <text x="2138" y="574" font-size="10" fill="#ffffff" text-anchor="start">Array&lt;ComputeOperation&gt;</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════════════
+       COL E — ScheduleTree subtree  (cx=1590)
+  ══════════════════════════════════════════════════════════ -->
+
+  <!-- STN  (cx=1590, y=660) -->
+  <g id="STN">
+    <rect x="1470" y="660" width="168" height="142" rx="7" fill="#2d7a56"/>
+    <text x="1478" y="678" font-size="11" fill="#ffffff" text-anchor="start">ScheduleTreeNode</text>
+    <text x="1478" y="693" font-size="10" fill="#ffffff" text-anchor="start">─ nodeType_: "allocate"</text>
+    <text x="1478" y="707" font-size="10" fill="#ffffff" text-anchor="start">─ name_: string</text>
+    <text x="1478" y="721" font-size="10" fill="#ffffff" text-anchor="start">─ component_: hbm|lx</text>
+    <text x="1478" y="735" font-size="10" fill="#ffffff" text-anchor="start">─ layoutDimOrder_[]</text>
+    <text x="1478" y="749" font-size="10" fill="#ffffff" text-anchor="start">─ maxDimSizes_[]</text>
+    <text x="1478" y="763" font-size="10" fill="#ffffff" text-anchor="start">─ isStartAddrSymbolic_</text>
+    <text x="1478" y="777" font-size="10" fill="#ffffff" text-anchor="start">─ indirectAllocType_</text>
+  </g>
+  <!-- ST → STN -->
+  <line x1="1590" y1="586" x2="1590" y2="660"
+        stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- COORD  (cx=1490, y=860) -->
+  <g id="COORD">
+    <rect x="1380" y="860" width="142" height="46" rx="7" fill="#2d7a56"/>
+    <text x="1388" y="879" font-size="11" fill="#ffffff" text-anchor="start">coordinates_</text>
+    <text x="1388" y="895" font-size="10" fill="#ffffff" text-anchor="start">CoordinateContainer</text>
+  </g>
+  <!-- STN → COORD -->
+  <polyline points="1470,731 1430,731 1430,883 1380,883"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+  <text x="1445" y="728" font-size="9" fill="#57606a" text-anchor="middle">coordinates_</text>
+
+  <!-- CINFO_MAP  (cx=1490, y=960) -->
+  <g id="CINFO_MAP">
+    <rect x="1370" y="960" width="201" height="46" rx="7" fill="#2d7a56"/>
+    <text x="1378" y="978" font-size="11" fill="#ffffff" text-anchor="start">coordInfo</text>
+    <text x="1378" y="994" font-size="10" fill="#ffffff" text-anchor="start">Object&lt;dim → CoordinateInfo&gt;</text>
+  </g>
+  <!-- COORD → CINFO_MAP -->
+  <line x1="1490" y1="906" x2="1490" y2="960"
+        stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- CINFO  (cx=1490, y=1060) -->
+  <g id="CINFO">
+    <rect x="1330" y="1060" width="314" height="116" rx="7" fill="#2d7a56"/>
+    <text x="1338" y="1079" font-size="11" fill="#ffffff" text-anchor="start">CoordinateInfo</text>
+    <text x="1338" y="1094" font-size="10" fill="#ffffff" text-anchor="start">─ spatial: integer</text>
+    <text x="1338" y="1108" font-size="10" fill="#ffffff" text-anchor="start">─ temporal: integer</text>
+    <text x="1338" y="1122" font-size="10" fill="#ffffff" text-anchor="start">─ elemArr: integer</text>
+    <text x="1338" y="1136" font-size="10" fill="#ffffff" text-anchor="start">─ padding: nopad | lowered_padded |</text>
+    <text x="1338" y="1150" font-size="10" fill="#ffffff" text-anchor="start">  padded_nozeropad | padded_wzeropad |</text>
+    <text x="1338" y="1164" font-size="10" fill="#ffffff" text-anchor="start">  padded_fullspan | padded_fullspan_wunneeded</text>
+  </g>
+  <!-- CINFO_MAP → CINFO -->
+  <line x1="1490" y1="1006" x2="1490" y2="1060"
+        stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- CINFO also has ─ folds: FoldManager (noted inline above) -->
+
+  <!-- ADDR_FM  (cx=1710, y=860) — startAddressCoreCorelet_ -->
+  <g id="ADDR_FM">
+    <rect x="1610" y="860" width="161" height="46" rx="7" fill="#57606a"/>
+    <text x="1618" y="878" font-size="10" fill="#ffffff" text-anchor="start">startAddressCoreCorelet_</text>
+    <text x="1618" y="893" font-size="10" fill="#ffffff" text-anchor="start">FoldManager</text>
+  </g>
+  <!-- STN → ADDR_FM -->
+  <polyline points="1710,802 1710,830 1720,830 1720,860"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- ══════════════════════════════════════════════════════════
+       COL F — LabeledDataStructure subtree  (cx=1800)
+  ══════════════════════════════════════════════════════════ -->
+
+  <!-- LDS1  (cx=1800, y=660) -->
+  <g id="LDS1">
+    <rect x="1680" y="660" width="215" height="128" rx="7" fill="#7c5cd8"/>
+    <text x="1688" y="678" font-size="11" fill="#ffffff" text-anchor="start">LabeledDataStructure</text>
+    <text x="1688" y="693" font-size="10" fill="#ffffff" text-anchor="start">─ ldsIdx_: integer</text>
+    <text x="1688" y="707" font-size="10" fill="#ffffff" text-anchor="start">─ dsName_: string</text>
+    <text x="1688" y="721" font-size="10" fill="#ffffff" text-anchor="start">─ dsType_: INPUT|OUTPUT|</text>
+    <text x="1688" y="735" font-size="10" fill="#ffffff" text-anchor="start">  KERNEL|KERNEL_IDX</text>
+    <text x="1688" y="749" font-size="10" fill="#ffffff" text-anchor="start">─ dataFormat_: FP16|FP32|BF16…</text>
+    <text x="1688" y="763" font-size="10" fill="#ffffff" text-anchor="start">─ wordLength: number</text>
+    <text x="1688" y="777" font-size="10" fill="#ffffff" text-anchor="start">─ scale_: number[]</text>
+  </g>
+  <!-- LDS → LDS1 -->
+  <line x1="1800" y1="586" x2="1800" y2="660"
+        stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- MO  (cx=1800, y=845) -->
+  <g id="MO">
+    <rect x="1690" y="845" width="135" height="46" rx="7" fill="#7c5cd8"/>
+    <text x="1698" y="863" font-size="11" fill="#ffffff" text-anchor="start">memOrg_:</text>
+    <text x="1698" y="879" font-size="10" fill="#ffffff" text-anchor="start">MemoryOrganization</text>
+  </g>
+  <!-- LDS1 → MO -->
+  <line x1="1800" y1="788" x2="1800" y2="845"
+        stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- HBM  (cx=1720, y=950) -->
+  <g id="HBM">
+    <rect x="1620" y="950" width="168" height="100" rx="7" fill="#7c5cd8"/>
+    <text x="1628" y="968" font-size="11" fill="#ffffff" text-anchor="start">hbm: MemorySlot</text>
+    <text x="1628" y="983" font-size="10" fill="#ffffff" text-anchor="start">─ isPresent: 0|1</text>
+    <text x="1628" y="997" font-size="10" fill="#ffffff" text-anchor="start">─ isPadded: 0|1</text>
+    <text x="1628" y="1011" font-size="10" fill="#ffffff" text-anchor="start">─ isZeroPadded: 0|1</text>
+    <text x="1628" y="1025" font-size="10" fill="#ffffff" text-anchor="start">─ dsOffset: integer</text>
+    <text x="1628" y="1039" font-size="10" fill="#ffffff" text-anchor="start">─ allocateNode_: string</text>
+  </g>
+  <!-- MO → HBM -->
+  <polyline points="1800,891 1800,920 1720,920 1720,950"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- LXS  (cx=1900, y=950) -->
+  <g id="LXS">
+    <rect x="1840" y="950" width="168" height="100" rx="7" fill="#7c5cd8"/>
+    <text x="1848" y="968" font-size="11" fill="#ffffff" text-anchor="start">lx: MemorySlot</text>
+    <text x="1848" y="983" font-size="10" fill="#ffffff" text-anchor="start">─ isPresent: 0|1</text>
+    <text x="1848" y="997" font-size="10" fill="#ffffff" text-anchor="start">─ isPadded: 0|1</text>
+    <text x="1848" y="1011" font-size="10" fill="#ffffff" text-anchor="start">─ isZeroPadded: 0|1</text>
+    <text x="1848" y="1025" font-size="10" fill="#ffffff" text-anchor="start">─ dsOffset: integer</text>
+    <text x="1848" y="1039" font-size="10" fill="#ffffff" text-anchor="start">─ allocateNode_: string</text>
+  </g>
+  <!-- MO → LXS -->
+  <polyline points="1800,891 1800,920 1940,920 1940,950"
+            fill="none" stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- ══════════════════════════════════════════════════════════
+       COL G — ConstantInfo  (cx=2010)
+  ══════════════════════════════════════════════════════════ -->
+
+  <!-- CINFO2  (cx=2010, y=660) -->
+  <g id="CINFO2">
+    <rect x="1900" y="660" width="155" height="72" rx="7" fill="#7c5cd8"/>
+    <text x="1908" y="678" font-size="11" fill="#ffffff" text-anchor="start">ConstantInfo</text>
+    <text x="1908" y="693" font-size="10" fill="#ffffff" text-anchor="start">─ name_: string</text>
+    <text x="1908" y="707" font-size="10" fill="#ffffff" text-anchor="start">─ dataFormat_: string</text>
+    <text x="1908" y="721" font-size="10" fill="#ffffff" text-anchor="start">─ data_: FoldManager</text>
+  </g>
+  <!-- CI → CINFO2 -->
+  <line x1="2010" y1="586" x2="2010" y2="660"
+        stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- ══════════════════════════════════════════════════════════
+       COL H — ComputeOperation subtree  (cx=2230)
+  ══════════════════════════════════════════════════════════ -->
+
+  <!-- COMP  (cx=2230, y=660) -->
+  <g id="COMP">
+    <rect x="2110" y="660" width="281" height="142" rx="7" fill="#c0540a"/>
+    <text x="2118" y="678" font-size="11" fill="#ffffff" text-anchor="start">ComputeOperation</text>
+    <text x="2118" y="693" font-size="10" fill="#ffffff" text-anchor="start">─ exUnit: sfp | pt</text>
+    <text x="2118" y="707" font-size="10" fill="#ffffff" text-anchor="start">─ opFuncName: string</text>
+    <text x="2118" y="721" font-size="10" fill="#ffffff" text-anchor="start">─ location: "Inner"</text>
+    <text x="2118" y="735" font-size="10" fill="#ffffff" text-anchor="start">─ inputLabeledDs: string[]</text>
+    <text x="2118" y="749" font-size="10" fill="#ffffff" text-anchor="start">─ outputLabeledDs: string[]</text>
+    <text x="2118" y="763" font-size="10" fill="#ffffff" text-anchor="start">─ interimLabeledDs: string[]</text>
+    <text x="2118" y="777" font-size="10" fill="#ffffff" text-anchor="start">─ indirectAccessIndexLabeledDs: string[]</text>
+  </g>
+  <!-- COP → COMP -->
+  <line x1="2230" y1="586" x2="2230" y2="660"
+        stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- ATTR  (cx=2230, y=860) -->
+  <g id="ATTR">
+    <rect x="2110" y="860" width="182" height="58" rx="7" fill="#c0540a"/>
+    <text x="2118" y="878" font-size="11" fill="#ffffff" text-anchor="start">attributes_</text>
+    <text x="2118" y="893" font-size="10" fill="#ffffff" text-anchor="start">─ dataFormat_: string</text>
+    <text x="2118" y="907" font-size="10" fill="#ffffff" text-anchor="start">─ fidelity_: regular|fast</text>
+  </g>
+  <!-- COMP → ATTR -->
+  <line x1="2230" y1="802" x2="2230" y2="860"
+        stroke="#57606a" stroke-width="1.3" marker-end="url(#arr)"/>
+
+  <!-- ══════════════════════════════════════════════════════════
+       COLUMN SEPARATOR LINES  (light grey, dashed)
+  ══════════════════════════════════════════════════════════ -->
+  <line x1="765"  y1="60" x2="765"  y2="1220" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="1270" y1="60" x2="1270" y2="1220" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="1465" y1="520" x2="1465" y2="1220" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="1670" y1="520" x2="1670" y2="1220" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="1885" y1="520" x2="1885" y2="1220" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="2100" y1="520" x2="2100" y2="1220" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4,4"/>
+
+  <!-- ══════════════════════════════════════════════════════════
+       COLUMN HEADER LABELS  (above each subtree group)
+  ══════════════════════════════════════════════════════════ -->
+  <text x="310"  y="1270" font-size="10" fill="#57606a" text-anchor="middle" font-style="italic">Fold primitives</text>
+  <text x="510"  y="1270" font-size="10" fill="#57606a" text-anchor="middle" font-style="italic">Debug / provenance</text>
+  <text x="870"  y="1270" font-size="10" fill="#57606a" text-anchor="middle" font-style="italic">Root → SuperDsc → DSC</text>
+  <text x="1005" y="1270" font-size="10" fill="#57606a" text-anchor="middle" font-style="italic">DSC dims &amp; stage params</text>
+  <text x="1490" y="1270" font-size="10" fill="#57606a" text-anchor="middle" font-style="italic">Schedule tree</text>
+  <text x="1800" y="1270" font-size="10" fill="#57606a" text-anchor="middle" font-style="italic">Labeled data structures</text>
+  <text x="2010" y="1270" font-size="10" fill="#57606a" text-anchor="middle" font-style="italic">Constants</text>
+  <text x="2230" y="1270" font-size="10" fill="#57606a" text-anchor="middle" font-style="italic">Compute operations</text>
+
+  <!-- ══════════════════════════════════════════════════════════
+       LEGEND
+  ══════════════════════════════════════════════════════════ -->
+  <g id="legend" transform="translate(40,1320)">
+    <text x="0" y="0" font-size="13" fill="#1f2328" font-weight="600">Legend</text>
+    <rect x="0"  y="12" width="18" height="12" rx="3" fill="#1f2328"/>
+    <text x="26" y="23" font-size="11" fill="#1f2328">Root / entry point</text>
+    <rect x="0"  y="32" width="18" height="12" rx="3" fill="#2563a8"/>
+    <text x="26" y="43" font-size="11" fill="#1f2328">SuperDsc level</text>
+    <rect x="0"  y="52" width="18" height="12" rx="3" fill="#3b82d4"/>
+    <text x="26" y="63" font-size="11" fill="#1f2328">DesignSpaceConfig level</text>
+    <rect x="0"  y="72" width="18" height="12" rx="3" fill="#7c5cd8"/>
+    <text x="26" y="83" font-size="11" fill="#1f2328">Tensor / data objects</text>
+    <rect x="0"  y="92" width="18" height="12" rx="3" fill="#2d7a56"/>
+    <text x="26" y="103" font-size="11" fill="#1f2328">Scheduling / coordinate objects</text>
+    <rect x="0"  y="112" width="18" height="12" rx="3" fill="#c0540a"/>
+    <text x="26" y="123" font-size="11" fill="#1f2328">Compute objects</text>
+    <rect x="0"  y="132" width="18" height="12" rx="3" fill="#57606a"/>
+    <text x="26" y="143" font-size="11" fill="#1f2328">FoldManager / FoldProperty (reusable)</text>
+  </g>
+
+</svg>

@@ -96,12 +96,10 @@ Documents are organized in the recommended reading order, grouped by learning st
 
 ### Stage 8 — Production Readiness
 
-> Error handling, authoring best practices, and the reference glossary.
+> Reference glossary.
 
 | # | Section | File |
 |---|---------|------|
-| 8.1 | Error Handling | [error-handling.md](error-handling.md) |
-| 8.2 | Best Practices | [best-practices.md](best-practices.md) |
-| 8.3 | Reference Documents & Glossary | [reference.md](reference.md) |
+| 8.1 | Reference Documents | [reference.md](reference.md) |
 
 ---
