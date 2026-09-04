@@ -4,61 +4,62 @@
 
 ```mlir
 module {
-  func.func @softmax_dynamic() {
-    %c0 = arith.constant 0 : index
-    %c1 = arith.constant 1 : index
+  func.func @softmax_dynamic(%in_arg:  !sdscbundle.input_arg<index>,
+                              %out_arg: !sdscbundle.input_arg<index>) {
+    %in_base  = sdscbundle.input_arg_extract value from %in_arg
+                  : !sdscbundle.input_arg<index> -> index
+    %out_base = sdscbundle.input_arg_extract value from %out_arg
+                  : !sdscbundle.input_arg<index> -> index
+
+    // Allocate a per-element temporary buffer (32 batches × 2048 bytes each)
+    %temp_pool = sdscbundle.device_mem_allocate 65536 bytes : index
+
+    %c0         = arith.constant 0  : index
+    %c1         = arith.constant 1  : index
     %batch_size = arith.constant 32 : index
-    
-    %input_base = arith.constant 0 : index
-    %temp_base = arith.constant 65536 : index
-    %output_base = arith.constant 131072 : index
-    
-    #input_map = affine_map<(d0)[base] -> (base + 2048*d0)>
-    #temp_map = affine_map<(d0)[base] -> (base + 2048*d0)>
-    #output_map = affine_map<(d0)[base] -> (base + 2048*d0)>
-    
+
     scf.for %b = %c0 to %batch_size step %c1 {
-      %in_addr = affine.apply #input_map (%b)[%input_base]
-      %tmp_addr = affine.apply #temp_map (%b)[%temp_base]
-      %out_addr = affine.apply #output_map (%b)[%output_base]
-      
-      // max reduction
+      %in_addr  = affine.apply affine_map<(d0)[s0] -> (s0 + 2048*d0)> (%b)[%in_base]
+      %tmp_addr = affine.apply affine_map<(d0)[s0] -> (s0 + 2048*d0)> (%b)[%temp_pool]
+      %out_addr = affine.apply affine_map<(d0)[s0] -> (s0 + 2048*d0)> (%b)[%out_base]
+
+      // max reduction: input → temp
       sdscbundle.sdsc_execute (%in_addr, %tmp_addr) {
         sdsc_filename="sdscMax.json",
         symbol_ids=[-1, -2]
       }
-      
-      // subtract max
+
+      // subtract max: (input, temp) → temp
       sdscbundle.sdsc_execute (%in_addr, %tmp_addr, %tmp_addr) {
         sdsc_filename="sdscSub.json",
-        symbol_ids=[-1, -2, -3]
+        symbol_ids=[-3, -4, -5]
       }
-      
-      // exp
+
+      // exp: temp → temp
       sdscbundle.sdsc_execute (%tmp_addr, %tmp_addr) {
         sdsc_filename="sdscExp.json",
-        symbol_ids=[-1, -2]
+        symbol_ids=[-6, -7]
       }
-      
-      // sum reduction
+
+      // sum reduction: temp → temp
       sdscbundle.sdsc_execute (%tmp_addr, %tmp_addr) {
         sdsc_filename="sdscSum.json",
-        symbol_ids=[-1, -2]
+        symbol_ids=[-8, -9]
       }
-      
-      // reciprocal
+
+      // reciprocal: temp → temp
       sdscbundle.sdsc_execute (%tmp_addr, %tmp_addr) {
         sdsc_filename="sdscReciprocal.json",
-        symbol_ids=[-1, -2]
+        symbol_ids=[-10, -11]
       }
-      
-      // multiply
+
+      // multiply: (temp, temp) → output
       sdscbundle.sdsc_execute (%tmp_addr, %tmp_addr, %out_addr) {
         sdsc_filename="sdscMul.json",
-        symbol_ids=[-1, -2, -3]
+        symbol_ids=[-12, -13, -14]
       }
     }
-    
+
     return
   }
 }
@@ -67,10 +68,11 @@ module {
 This example demonstrates:
 
 - Loop-based batch processing
-- Dynamic address calculation
+- Dynamic address calculation using inline `affine.apply`
 - Sequential operation chaining
-- Symbol-based parameterization
-- Temporary buffer management
+- Symbol-based parameterization with unique symbol IDs across all `sdsc_execute` calls
+- Intermediate buffer management via `sdscbundle.device_mem_allocate`
+- Runtime-provided input/output addresses via `!sdscbundle.input_arg<index>`
 
 ---
 
