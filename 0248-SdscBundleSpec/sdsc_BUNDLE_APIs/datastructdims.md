@@ -46,6 +46,8 @@ for this object.
 
 No fields are required; include only the dimensions relevant to the operation.
 
+**Note on dim field values:** All numeric dimension fields accept either a number (typically `-1` when unset, or a positive value when set) or an empty object `{}`. The empty-object form is emitted in some symbolic-dimension contexts and must be tolerated by readers.
+
 ### Primary dimension fields
 
 These are always serialized (value `-1` when unset):

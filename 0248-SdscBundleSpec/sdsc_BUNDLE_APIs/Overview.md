@@ -4,7 +4,7 @@ The SuperDSC-Bundle API defines the interface between [torch-spyre](https://torc
 
 SuperDSC stand for ***Super Design Space Configuration*** and is a JSON based IR designed to describe the tile-level compute graph for the 32 cores of Spyre.
 A SuperDSC-Bundle enables the expression of data-parallel mappings for complex kernels across multi-core accelerators.
-Follow the link for a description of the [SuperDSC-Bundle Interface Specification](https://github.com/jneves60/interface-specs/blob/main/0248-SdscBundleSpec/SuperDSC-Bundle.md).
+Follow the link for a description of the [SuperDSC-Bundle Interface Specification](https://github.com/torch-spyre/interface-specs/blob/main/0248-SdscBundleSpec/SuperDSC-Bundle.md).
 
 The Figure below illustrates what is called the Spyre Stack where a user written PyTorch program is compiled by torch-spyre to generate a sets of files known as the **SuperDSC-Bundle**. A PyTorch file may translate into several SuperDSC-Bundles, each one being composed of a ***bundle.mir*** file and several ***sdsc_\*.json*** files, each json file describing a torch operation (A full list of supported operations can be found in [torch-spyre](https://torch-spyre.readthedocs.io/)). 
 Each SuperDSC-Bundle is compiled by **DeepTools** to generate the assembly code that runs on the Spyre AI Accelerator Card. Furthermore, the compiler also generates the execution plan that manages the execution of an operation as well as intra-memory data movement on the Spyre Card.
@@ -75,29 +75,6 @@ DesignSpaceConfig can represent **BOTH** deep learning operators AND data-shuffl
 - Data in one core can be directly available for compute in another core
 - The backend compiler will ensure proper data movement across cores
 - **Current Limitation:** This functionality is not yet available in the backend; it will be implemented in a future iteration
-
-### Padding for Chunked Dimensions
-
-When a padded dimension is chunked across cores:
-
-- Set front/back padding to `-1` in the "core" data stage
-- This signals special handling for distributed padding
-
-### Stick Constraint Ripple Effects
-
-Stick constraints can cause ripple effects across tensors:
-
-- A tensor may need padding in its non-stick dimension
-- This occurs when that dimension appears in the stick of another tensor feeding the same operation
-- Required to ensure dimension span consistency across all tensors
-
-### Input2 Padding in Matmul
-
-In BatchMatmul operations:
-
-- Input2 must be padded along `reduction_dim` (even though it's not in Input2's stick)
-- Required because `reduction_dim` is part of Input1's stick
-- Ensures dimension span consistency between inputs
 
 ---
 

@@ -46,7 +46,7 @@ All five required fields must be present. No additional properties are allowed.
 | `dsName_` | string | Yes | — | Unique tensor name within the DSC. Compute operations reference this tensor as `"<dsName_>-idx<ldsIdx_>"` (e.g. `"convolution-Tensor0-idx0"`). |
 | `dsType_` | string enum | Yes | `"INPUT"` `"OUTPUT"` `"KERNEL"` `"KERNEL_IDX"` | Tensor role. Must match a type defined in `primaryDsInfo_` of the parent DSC. Sourced from torch_spyre `LAYOUT_INPUT_LABELS` / `LAYOUT_OUTPUT_LABELS`. |
 | `scale_` | array of number | No | One entry per dimension in `dsType_` order | Per-dimension scale factors in `layoutDimOrder_` order. `1` = normal size; `-1` = reduced / broadcast; `-2` = reduced / broadcast stick dimension. |
-| `wordLength` | number | No | > 0 (exclusive) | Element size in bytes. Integer for full-byte formats (e.g. `2` for FP16); fractional for sub-byte formats (e.g. `0.5` for 4-bit types such as `SENINT4` and `SEN121_FP4`). **Note:** field name lacks the trailing underscore used by all other fields — see [F8 note](#f8-note-on-wordlength-naming). |
+| `wordLength` | number | No | > 0 (exclusive) | Element size in bytes. Integer for full-byte formats (e.g. `2` for FP16); fractional for sub-byte formats (e.g. `0.5` for 4-bit types such as `SENINT4` and `SEN121_FP4`). **Note:** field name lacks the trailing underscore used by all other fields — see [note](#note-on-wordlength-naming). |
 | `dataFormat_` | string enum | Yes | see [Data Formats](#data-formats) | Numeric format of each tensor element. `SEN169_FP16` is the most common Spyre format. |
 | `memOrg_` | [MemoryOrganization](memoryorganization.md) | Yes | — | Memory residency — specifies which memories (HBM, LX scratchpad) hold this tensor. |
 
@@ -76,13 +76,12 @@ All five required fields must be present. No additional properties are allowed.
 | `IEEE_INT32` | IEEE 32-bit signed integer |
 | `IEEE_INT64` | IEEE 64-bit signed integer |
 
-## F8 Note on `wordLength` Naming
+## Note on `wordLength` Naming
 
 All other fields in `LabeledDataStructure` use a trailing underscore
-(`ldsIdx_`, `dsName_`, etc.). The field `wordLength` does not.
-`SDSC-json-api.md` refers to it as `wordLength_`. The serialized key in the
-JSON bundle is `wordLength` (no underscore) — this inconsistency is a known
-anomaly. Do not add a trailing underscore when writing bundle JSON.
+(`ldsIdx_`, `dsName_`, etc.). The field `wordLength` does not. The serialized
+key in the JSON bundle is `wordLength` (no underscore) — do not add a trailing
+underscore when writing bundle JSON.
 
 ## Example
 

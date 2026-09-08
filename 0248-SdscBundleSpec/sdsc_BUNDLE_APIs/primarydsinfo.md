@@ -28,7 +28,8 @@ labels such as `INPUT`, `OUTPUT`, `KERNEL`, or `KERNEL_IDX`.
 {
   "layoutDimOrder_": ["<dim>", ...],
   "stickDimOrder_":  ["<dim>", ...],
-  "stickSize_":      [<int>, ...]
+  "stickSize_":      [<int>, ...],
+  "stickRepl_":      [<int>, ...]
 }
 ```
 
@@ -39,6 +40,7 @@ labels such as `INPUT`, `OUTPUT`, `KERNEL`, or `KERNEL_IDX`.
 | `layoutDimOrder_` | array of string | No | Dimension names matching those declared in `DataStructDims` | Ordered list of dimension names describing how the tensor is laid out in memory, outermost first. |
 | `stickDimOrder_` | array of string | No | Must be a suffix subset of `layoutDimOrder_`; length must equal length of `stickSize_` | The innermost contiguous dimensions that form a stick — the atomic unit of storage transfer. |
 | `stickSize_` | array of integer | No | Each integer >= 1; parallel to `stickDimOrder_` | Size of each stick dimension in elements. Position `i` is the size of `stickDimOrder_[i]`. |
+| `stickRepl_` | array of integer | No | Each integer >= 1; parallel to `stickDimOrder_` | Per-stick-dimension replication counts. Emitted by the frontend for pool/window ops. Defaults to all-ones when absent. |
 
 ### Relationship between `stickDimOrder_` and `stickSize_`
 

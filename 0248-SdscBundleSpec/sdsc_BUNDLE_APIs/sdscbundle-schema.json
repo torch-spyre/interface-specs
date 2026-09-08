@@ -59,6 +59,18 @@
           "type": "object",
           "description": "Variable definitions for symbolic dimensions"
         },
+        "debug_handle_": {
+          "description": "Source-to-kernel provenance for this SuperDsc, emitted by the frontend. null is a normal value, not missing data. Not read by the deeptools loader -- it exists for tooling that maps a kernel back to its source. See DebugHandle.",
+          "oneOf": [
+            {"$ref": "#/$defs/DebugHandle"},
+            {"type": "null"}
+          ]
+        },
+        "datadscs_": {
+          "type": "array",
+          "description": "Data-operation DSCs (transpose, slice, ...) attached to this SuperDsc. Emitted by the frontend only when symbolic dims are present, always as an empty array; the loader imports each element as a DataOpDsc. Element contents are outside this curated set.",
+          "items": {"type": "object"}
+        },
         "coreIdToDsc_": {
           "type": "object",
           "description": "Mapping from core ID to DSC index",
@@ -119,6 +131,74 @@
       },
       "additionalProperties": false
     },
+    "DebugHandle": {
+      "type": "object",
+      "description": "Source-to-kernel provenance handle, nestable to mirror MLIR locations. Produced by the frontend's DebugHandle serializer. A null source or aten_op is a normal value: when an op fuses origins from several source lines there is no single headline, and the full set is preserved in fused_from.",
+      "required": ["id", "source", "aten_op", "ir_chain", "fused_from", "transform_history"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Handle id. Serialized as a string because a 63-bit value exceeds JS Number.MAX_SAFE_INTEGER and would be rounded by JSON.parse."
+        },
+        "source": {
+          "description": "Headline source location, or null when the op fuses several origins.",
+          "oneOf": [
+            {"$ref": "#/$defs/SourceLoc"},
+            {"type": "null"}
+          ]
+        },
+        "aten_op": {
+          "description": "Originating ATen op name, or null when the op fuses several origins.",
+          "oneOf": [
+            {"type": "string"},
+            {"type": "null"}
+          ]
+        },
+        "ir_chain": {
+          "type": "array",
+          "description": "Lowering lineage, outermost first.",
+          "items": {"type": "string"}
+        },
+        "fused_from": {
+          "type": "array",
+          "description": "Handles this one was fused from. Recursive.",
+          "items": {"$ref": "#/$defs/DebugHandle"}
+        },
+        "transform_history": {
+          "type": "array",
+          "description": "Structured lower-IR rewrites applied to this op.",
+          "items": {"$ref": "#/$defs/ProvenanceTransform"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "SourceLoc": {
+      "type": "object",
+      "description": "Structured source location. Field names mirror MLIR FileLineColRange so a future KTIR migration maps 1:1.",
+      "required": ["file", "start_line", "start_col", "end_line", "end_col"],
+      "properties": {
+        "file": {"type": "string"},
+        "start_line": {"type": "integer"},
+        "start_col": {"type": "integer"},
+        "end_line": {"oneOf": [{"type": "integer"}, {"type": "null"}]},
+        "end_col": {"oneOf": [{"type": "integer"}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    },
+    "ProvenanceTransform": {
+      "type": "object",
+      "description": "One structured lower-IR transformation in a provenance history.",
+      "required": ["kind", "pass_name", "reason"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["rewrite", "fusion", "decomposition", "clone", "remap"]
+        },
+        "pass_name": {"type": "string"},
+        "reason": {"oneOf": [{"type": "string"}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    },
     "FoldProperty": {
       "type": "object",
       "description": "Pairs a fold factor with a memory hierarchy level label. Used in SuperDsc (coreFoldProp_, coreletFoldProp_, sdscFoldProps_) and FoldManager (dim_prop_attr) to describe how data is partitioned across cores, corelets, and time steps.",
@@ -126,7 +206,7 @@
       "properties": {
         "factor_": {
           "type": "integer",
-          "description": "Number of equal slices the dimension is divided into at this fold level. 1 = no splitting.",
+          "description": "Iteration extent of this fold dimension: legal indices are 0 .. factor_-1, and FoldManager::isLegal errors on any index >= factor_. 1 = no splitting. Minimum 1 is therefore correct -- factor_ 0 admits no index at all, so the dimension cannot be read. Known frontend bug: elem_arr_1 is emitted as a whole-stick count (size divided by elements-per-stick, rounding down), which underflows to 0 for a dimension smaller than one stick -- but factor_ is an index extent, so it must round up. The gather/scatter fixtures under dxp/test carry the bad value and fail validation until the frontend is corrected.",
           "minimum": 1
         },
         "label_": {
@@ -236,7 +316,20 @@
         },
         "maskingConstId_": {
           "type": "integer",
-          "description": "Index into constantInfo_ of the masking constant."
+          "description": "Index into constantInfo_ of the masking constant, or -1 when the operation has none. -1 is DesignSpaceConfig::maskingConstId_'s default and is the common case.",
+          "minimum": -1
+        },
+        "pdsRelation_": {
+          "type": "object",
+          "description": "Relationships between the primary data structures. Emitted by the frontend for pool/window ops and read by DesignSpaceConfig::importJsonObj.",
+          "properties": {
+            "isPdsReuse": {
+              "type": "integer",
+              "enum": [0, 1],
+              "description": "1 = the input and output primary data structures share storage."
+            }
+          },
+          "additionalProperties": false
         },
         "dataStageParam_": {
           "type": "object",
@@ -284,6 +377,11 @@
                 "stickSize_": {
                   "type": "array",
                   "description": "Size of each stick dimension in elements. Parallel to stickDimOrder_: stickSize_[i] is the element count for stickDimOrder_[i].",
+                  "items": {"type": "integer", "minimum": 1}
+                },
+                "stickRepl_": {
+                  "type": "array",
+                  "description": "Per-stick-dimension replication counts, parallel to stickDimOrder_. Emitted by the frontend for pool/window ops and read by DesignSpaceConfig::importJsonObj. Defaults to all-ones when absent.",
                   "items": {"type": "integer", "minimum": 1}
                 }
               }
@@ -485,11 +583,17 @@
         },
         "indirectAllocType_": {
           "type": "string",
-          "description": "Indirect allocation type tag. Present when this node participates in an indirect-access allocation pattern."
+          "description": "Indirect allocation type tag. Present when this node participates in an indirect-access allocation pattern.",
+          "enum": ["no_indirection", "value_tensor", "index_tensor"]
         },
         "relatedIndirectAccessAlloc_": {
           "type": "string",
           "description": "Name of the related indirect-access allocation node. Must match another node's name_ field, linking this node to its paired indirect access entry."
+        },
+        "indexTensorType_": {
+          "type": "string",
+          "description": "How an index tensor's elements are interpreted: 'index' = element indices, 'address' = precomputed addresses. Emitted only when indirectAllocType_ is 'index_tensor'. Both values of AllocateNode::IndexTensorType (dsc/dsc2.h) are accepted, matching the loader.",
+          "enum": ["index", "address"]
         },
         "coordinates_": {
           "type": "object",
@@ -535,8 +639,10 @@
         },
         "padding": {
           "type": "string",
-          "description": "Padding type",
-          "enum": ["nopad", "pad"]
+          "description": "Padding type, from the PadType enum (string mapping in EnumsConversion::padTypeToString).",
+          "enum": ["nopad", "lowered_padded", "padded_nozeropad",
+                   "padded_wzeropad", "padded_fullspan",
+                   "padded_fullspan_wunneeded"]
         },
         "folds": {
           "$ref": "#/$defs/FoldManager",
@@ -552,7 +658,9 @@
       "properties": {
         "isPresent":    {"type": "integer", "enum": [0, 1], "description": "1 = tensor resides in this memory, 0 = absent"},
         "isPadded":     {"type": "integer", "enum": [0, 1], "description": "1 = allocation includes padding. See DimPaddingSizes for padding details."},
-        "isZeroPadded": {"type": "integer", "enum": [0, 1], "description": "1 = padded region is zero-filled. Only meaningful when isPadded is 1."}
+        "isZeroPadded": {"type": "integer", "enum": [0, 1], "description": "1 = padded region is zero-filled. Only meaningful when isPadded is 1."},
+        "dsOffset":     {"type": "integer", "description": "Byte offset of this tensor within its allocation. Emitted alongside allocateNode_ for every non-depthwise op; part of the general memOrg contract."},
+        "allocateNode_": {"type": "string", "description": "Name of the ScheduleTreeNode that allocates this tensor in this memory. Must match that node's name_ field."}
       },
       "additionalProperties": false
     },
@@ -590,14 +698,18 @@
           "items": {"type": "number"}
         },
         "wordLength": {
-          "type": "integer",
-          "description": "Word length in bytes",
-          "minimum": 1
+          "type": "number",
+          "description": "Word length in bytes. Fractional for sub-byte formats: the 4-bit types (SENINT4, SEN121_FP4) carry 0.5, so this is a number rather than an integer. Must be > 0.",
+          "exclusiveMinimum": 0
         },
         "dataFormat_": {
           "type": "string",
-          "description": "Data format",
-          "enum": ["SEN169_FP16", "SEN169_BFP16", "SEN169_FP32", "SEN169_INT8", "SEN169_INT16", "SEN169_INT32"]
+          "description": "Data format. Values are the DataFormats enum names accepted by FromString<DataFormats>() in util/sendefs/sendefs.h; INVALID is excluded because it is that converter's error sentinel, not an input format.",
+          "enum": ["SEN169_FP16", "IEEE_FP32", "IEEE_FP16", "BFLOAT16", "BOOL",
+                   "SEN143_FP8", "SEN152_FP8", "SEN153_FP9", "SEN18F_FP24",
+                   "SEN080_FP8", "SEN053_FP8", "SEN121_FP4",
+                   "SENINT2", "SENINT4", "SENINT8", "SENINT16", "SENINT24",
+                   "SENUINT2", "SENUINT32", "IEEE_INT32", "IEEE_INT64"]
         },
         "memOrg_": {
           "$ref": "#/$defs/MemoryOrganization",
@@ -630,15 +742,15 @@
             },
             "fidelity_": {
               "type": "string",
-              "description": "Computation fidelity",
-              "enum": ["regular", "high", "low"]
+              "description": "Computation fidelity, from the OpAttributes::Fidelity enum (string mapping in OpAttributes::fidelityToString).",
+              "enum": ["regular", "fast"]
             }
           }
         },
         "location": {
           "type": "string",
-          "description": "Placement in the schedule loop nest. 'Inner' = op executes inside the innermost loop; 'Outer' = op executes in an outer loop.",
-          "enum": ["Inner", "Outer"]
+          "description": "Name of the loop the op executes in, from the LoopNames enum (string mapping in DesignSpaceConfig::loopNameToString). The loader accepts all 32 loop names, but only 'Inner' (the innermost loop) is supported in this curated set -- it is the only value the torch-spyre frontend emits.",
+          "enum": ["Inner"]
         },
         "inputLabeledDs": {
           "type": "array",
@@ -650,12 +762,12 @@
           "description": "Output tensor references from labeledDs_ using the '<dsName_>-idx<N>' naming convention.",
           "items": {"type": "string"}
         },
-        "indirectAccessIndexLabeledDs_": {
+        "indirectAccessIndexLabeledDs": {
           "type": "array",
           "description": "Index tensors for indirect access operations (gather/scatter). See ScheduleTreeNode.indirectAllocType_.",
           "items": {"type": "string"}
         },
-        "interimLabeledDs_": {
+        "interimLabeledDs": {
           "type": "array",
           "description": "Intermediate tensors used within the operation, not exposed as inputs or outputs.",
           "items": {"type": "string"}
@@ -705,8 +817,12 @@
         },
         "dataFormat_": {
           "type": "string",
-          "description": "Numeric format of the constant elements. Must match the data format of the tensors the constant is applied to.",
-          "enum": ["SEN169_FP16", "SEN169_BFP16", "SEN169_FP32", "SEN169_INT8", "SEN169_INT16", "SEN169_INT32"]
+          "description": "Numeric format of the constant elements. Must match the data format of the tensors the constant is applied to. Same value set as LabeledDataStructure.dataFormat_ (see util/sendefs/sendefs.h FromString<DataFormats>()).",
+          "enum": ["SEN169_FP16", "IEEE_FP32", "IEEE_FP16", "BFLOAT16", "BOOL",
+                   "SEN143_FP8", "SEN152_FP8", "SEN153_FP9", "SEN18F_FP24",
+                   "SEN080_FP8", "SEN053_FP8", "SEN121_FP4",
+                   "SENINT2", "SENINT4", "SENINT8", "SENINT16", "SENINT24",
+                   "SENUINT2", "SENUINT32", "IEEE_INT32", "IEEE_INT64"]
         },
         "data_": {
           "$ref": "#/$defs/FoldManager",

@@ -35,7 +35,7 @@ The interface is essential to connect the torch-spyre frontend compiler with the
 The `SuperDSC-Bundle` specification is used by the Deeptools backend compiler to produce `SpyreCode` containing the job binary, a job plan and other compiled artifacts. In the scenario, where either the start-address and/or shapes are symbolic, `SpyreCode` allows for the program binary to contain variables that need to be substituted or corrected before execution. The mechanism to effect program correction just-in-time before the job is launched onto spyre is also produced by the backend compiler as part of `SpyreCode`.
 
 NOTES:
-* Frontend/Backend compiler interface will transition to a new interface called Kernel Tile Intermediate Representation (KTIR) in the future (https://github.com/torch-spyre/torch-spyre/blob/main/RFCs/0682-KtirSpec/0682-KtirSpecRFC.md)
+* Frontend/Backend compiler interface will transition to a new interface called Kernel Tile Intermediate Representation (KTIR) in the future (https://github.com/torch-spyre/rfcs/blob/main/0682-KtirSpec/0682-KtirSpecRFC.md)
 * `SuperDSC` (without bundle capability) is the current interface between Deeptools frontend compiler and Deeptools backend compiler
 * `SpyreCode` is tracked through: https://github.com/torch-spyre/torch-spyre/issues/277
 
