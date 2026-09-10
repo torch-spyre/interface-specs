@@ -31,7 +31,7 @@ Each parameter is one of:
 |---|---|
 | *(none)* | No parameters — all symbol values (addresses and sizes) are embedded as `arith.constant` values inside the function body. |
 | `index` | A resolved symbol value (base address or dimension size) passed directly as a constant index value. |
-| `!sdscbundle.input_arg<index>` | A runtime-provided symbol value (base address or dimension size). Must be extracted with `sdscbundle.input_arg_extract` before use. |
+| `!sdscbundle.input_arg<index>` | A runtime-provided symbol value (base address or dimension size). May carry optional `granularity=N` and/or `max_value=N` annotations for symbolic dimension parameters. Must be extracted with `sdscbundle.input_arg_extract` before use. |
 
 **Attributes:**
 
@@ -174,7 +174,7 @@ means by which a frontend compiler communicates with the Spyre backend.
 |---|---|
 | [`sdscbundle.sdsc_execute`](#sdscbundlesdsc_execute) | Instantiates and executes one SDSC JSON operation. |
 | [`sdscbundle.device_mem_allocate`](#sdscbundledevice_mem_allocate) | Allocates a contiguous device memory buffer for intermediate or scratch tensors. |
-| [`sdscbundle.input_arg_extract`](#sdscbundleinput_arg_extract) | Extracts the runtime `index` value from a `!sdscbundle.input_arg<index>` bundle parameter. |
+| [`sdscbundle.input_arg_extract`](#sdscbundleinput_arg_extract) | Extracts a named field (`value`, `granularity`, or `max_value`) from a `!sdscbundle.input_arg<index>` bundle parameter. |
 
 **Supporting MLIR operations (permitted use within SDSC Bundles):**
 
@@ -377,26 +377,37 @@ sdscbundle.sdsc_execute (%addr_32768, %addr_49152, %arg_2) {sdsc_filename="sdsc_
 
 **Description:**
 
-Extracts the runtime `index` value from a `!sdscbundle.input_arg<index>` bundle
-parameter. Every `func.func` parameter of type `!sdscbundle.input_arg<index>` must be
-unwrapped with this operation before its value can be used in arithmetic or passed as
-an operand to `sdscbundle.sdsc_execute`.
+Extracts a named field from a `!sdscbundle.input_arg<index>` bundle parameter.
+The extractable fields are `value`, `granularity`, and `max_value`. Every
+`func.func` parameter of type `!sdscbundle.input_arg<index>` must be unwrapped
+with this operation before its content can be used in arithmetic or passed as an
+operand to `sdscbundle.sdsc_execute`.
+
+- `value` — the runtime base address or dimension size provided by the caller.
+  Available on all `input_arg` parameters.
+- `granularity` — the step constraint for a symbolic dimension size (i.e. the
+  runtime value must be a multiple of this). Corresponds to `granularity_` in
+  [`SymbolicDimInfo`](datastructdims.md#symbolicdiminfo) in the accompanying SDSC.
+- `max_value` — the upper bound for a symbolic dimension size. Corresponds to
+  `maxSize_` in [`SymbolicDimInfo`](datastructdims.md#symbolicdiminfo) in the
+  accompanying SDSC.
 
 **Syntax:**
 
 ```mlir
-%result = sdscbundle.input_arg_extract value from %arg : !sdscbundle.input_arg<index> -> index
+%result = sdscbundle.input_arg_extract value       from %arg : !sdscbundle.input_arg<index> -> index
+%result = sdscbundle.input_arg_extract granularity from %arg : !sdscbundle.input_arg<index, granularity=N> -> index
+%result = sdscbundle.input_arg_extract max_value   from %arg : !sdscbundle.input_arg<index, max_value=N> -> index
 ```
 
 **Operands:**
 
-- **%arg** (required): An SSA value of type `!sdscbundle.input_arg<index>` — must be a
-  `func.func` block argument.
+- **%arg** (required): An SSA value of type `!sdscbundle.input_arg<index>` (or
+  its annotated variant) — must be a `func.func` block argument.
 
 **Attributes:** None.
 
-**Returns:** A single `index` SSA value — the runtime base address provided by the
-caller for this argument.
+**Returns:** A single `index` SSA value — the extracted field for this argument.
 
 **Constraints:**
 
@@ -404,27 +415,50 @@ caller for this argument.
   `!sdscbundle.input_arg<index>`; it cannot be the result of another operation.
 - Must appear in the entry block of the bundle function, before any use of the
   extracted value.
+- `granularity` and `max_value` may only be extracted when the type annotation
+  on the parameter declares the corresponding attribute; extracting an absent
+  field is invalid.
 
-**Example:**
+**Example — value (base address):**
 
 ```mlir
 module {
   func.func @sdsc_bundle(%base_arg: !sdscbundle.input_arg<index>) {
-    %base = sdscbundle.input_arg_extract value from %base_arg : !sdscbundle.input_arg<index> -> index
+    %base = sdscbundle.input_arg_extract value from %base_arg
+              : !sdscbundle.input_arg<index> -> index
     sdscbundle.sdsc_execute (%base) {sdsc_filename="sdsc_0.json", symbol_ids=[-1]}
     return
   }
 }
 ```
 
-Multiple parameters:
+**Example — granularity and max_value (symbolic dimension):**
+
+```mlir
+module {
+  func.func @sdsc_bundle(%M_sym: !sdscbundle.input_arg<index, granularity=64, max_value=1024>) {
+    %val  = sdscbundle.input_arg_extract value       from %M_sym
+              : !sdscbundle.input_arg<index, granularity=64, max_value=1024> -> index
+    %gran = sdscbundle.input_arg_extract granularity from %M_sym
+              : !sdscbundle.input_arg<index, granularity=64> -> index
+    %max  = sdscbundle.input_arg_extract max_value   from %M_sym
+              : !sdscbundle.input_arg<index, max_value=1024> -> index
+    sdscbundle.sdsc_execute (%val) {sdsc_filename="sdsc_0.json", symbol_ids=[-1]}
+    return
+  }
+}
+```
+
+**Example — multiple parameters:**
 
 ```mlir
 module {
   func.func @sdsc_bundle(%arg_0: !sdscbundle.input_arg<index>,
                          %arg_1: !sdscbundle.input_arg<index>) {
-    %base_0 = sdscbundle.input_arg_extract value from %arg_0 : !sdscbundle.input_arg<index> -> index
-    %base_1 = sdscbundle.input_arg_extract value from %arg_1 : !sdscbundle.input_arg<index> -> index
+    %base_0 = sdscbundle.input_arg_extract value from %arg_0
+                : !sdscbundle.input_arg<index> -> index
+    %base_1 = sdscbundle.input_arg_extract value from %arg_1
+                : !sdscbundle.input_arg<index> -> index
     sdscbundle.sdsc_execute (%base_0, %base_1) {sdsc_filename="sdsc_0.json", symbol_ids=[-1, -2]}
     return
   }
@@ -473,8 +507,9 @@ scf.for %iterator = %lower_bound to %upper_bound step %step {
 - The lower bound and step must be compile-time constants. The upper bound may
   be a compile-time constant or a symbolic value. Parametric loops
   do not support a symbolic upper bound.
-- Loop-carried variables are not supported.
-- Only the induction variable may be used directly inside the loop body.
+- Loop-carried variables are not supported. The induction variable may be used
+  freely inside the loop body (e.g. as an operand to `affine.apply` or
+  `arith.addi` to compute per-iteration addresses).
 - `sdscbundle.device_mem_allocate` should not appear inside the loop body; if it does, the backend still reserves only one buffer for the entire kernel, not one per iteration.
 
 **Example:**

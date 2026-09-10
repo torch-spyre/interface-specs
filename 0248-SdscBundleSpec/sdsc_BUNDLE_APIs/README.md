@@ -1,5 +1,16 @@
 # SDSC Bundle API Documentation
 
+**Spec Version:** 1.0.0
+**Last Updated:** 2026-09-09
+**Git Baseline:** `fcd337a`
+**Status:** Active
+
+> Version numbers follow [Semantic Versioning](https://semver.org/):
+> **MAJOR** — breaking change to a field, type, or required constraint;
+> **MINOR** — new field, new object, or new operation added;
+> **PATCH** — correction, clarification, or editorial fix.
+> Bump the version in this header when a PR is merged.
+
 ---
 
 ## Table of Contents

@@ -71,11 +71,72 @@ These are always serialized (value `-1` when unset):
 | Field | Type | Description |
 |---|---|---|
 | `paddingSizes_` | map&lt;string, DimPaddingSizes&gt; | Per-dimension padding information. Keys are dim names (e.g. `"r_"`, `"c_"`). See [Padding](padding.md). |
-| `symbolicDimInfo_` | map&lt;string, SymbolicDimInfo&gt; | Per-dimension symbolic size info for symbolic dimension support. |
+| `symbolicDimInfo_` | map&lt;string, SymbolicDimInfo&gt; | Per-dimension symbolic size constraints. Keys are dimension names (e.g. `"mb_"`). See [SymbolicDimInfo](#symbolicdiminfo) below. |
 | `maxSymbolicVolume_` | map&lt;string, integer&gt; | Maximum combined symbolic volume for a set of dims. Keys are dim-set arrays encoded as strings (e.g. `'["in_","mb_"]'`). |
 | `coreletSplit_` | map&lt;string, array&lt;int&gt;&gt; | Explicit per-dimension work split across corelets. One integer per corelet. |
 | `rowSplit_` | map&lt;string, map&lt;string, array&lt;int&gt;&gt;&gt; | Per-dimension, per-corelet work split across PT rows. |
 | `peSfpSplit_` | map&lt;string, map&lt;string, map&lt;string, int&gt;&gt;&gt; | Per-dimension, per-corelet work split between PE and SFP components. |
+
+---
+
+## SymbolicDimInfo
+
+`SymbolicDimInfo` constrains a symbolic dimension size at runtime. It appears as
+a value inside `DataStructDims.symbolicDimInfo_`, keyed by dimension name
+(e.g. `"mb_"`). Both fields are required.
+
+### Structure
+
+```json
+{
+  "maxSize_":    <integer>,
+  "granularity_": <integer>
+}
+```
+
+### Fields
+
+| JSON field | Type | Required | Constraints | Description |
+|---|---|---|---|---|
+| `maxSize_` | integer | Yes | >= 1 | Upper bound the backend must plan memory for. The runtime value supplied at job launch must not exceed this. Corresponds to the `max_value` annotation on `!sdscbundle.input_arg<index, max_value=N>` in the MLIR bundle. |
+| `granularity_` | integer | Yes | >= 1 | Step size the runtime value must be a multiple of. For a dimension split across N cores, `granularity_` must be a multiple of N. Corresponds to the `granularity` annotation on `!sdscbundle.input_arg<index, granularity=N>` in the MLIR bundle. |
+
+### JSON ↔ MLIR name mapping
+
+| JSON (`symbolicDimInfo_`) | MLIR (`!sdscbundle.input_arg` annotation) | MLIR extraction keyword |
+|---|---|---|
+| `maxSize_` | `max_value=N` | `sdscbundle.input_arg_extract max_value` |
+| `granularity_` | `granularity=N` | `sdscbundle.input_arg_extract granularity` |
+
+See [`sdscbundle.input_arg_extract`](MLIR-bundle-API.md#sdscbundleinput_arg_extract) for the full MLIR usage.
+
+### Example
+
+A symbolic `mb_` dimension with a maximum of 32 and a granularity of 1
+(runtime value must be a positive integer ≤ 32):
+
+```json
+"symbolicDimInfo_": {
+  "mb_": {
+    "maxSize_":    32,
+    "granularity_": 1
+  }
+}
+```
+
+The corresponding MLIR parameter and extractions:
+
+```mlir
+func.func @op(%mb_arg: !sdscbundle.input_arg<index, granularity=1, max_value=32>) {
+  %mb   = sdscbundle.input_arg_extract value       from %mb_arg
+            : !sdscbundle.input_arg<index, granularity=1, max_value=32> -> index
+  %gran = sdscbundle.input_arg_extract granularity from %mb_arg
+            : !sdscbundle.input_arg<index, granularity=1> -> index
+  %max  = sdscbundle.input_arg_extract max_value   from %mb_arg
+            : !sdscbundle.input_arg<index, max_value=32> -> index
+  ...
+}
+```
 
 ### Deprecated dimension fields
 
