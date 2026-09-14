@@ -77,7 +77,7 @@ module {
   "component_": "hbm",
   "isStartAddrSymbolic_": true,
   "startAddressCoreCorelet_": {
-    "dim_prop_func": ["Const"],
+    "dim_prop_func": [{"Const": {}}],
     "data_": {
       "[0, 0]": "-1"
     }
@@ -126,7 +126,7 @@ module {
   "component_": "hbm",
   "isStartAddrSymbolic_": true,
   "startAddressCoreCorelet_": {
-    "dim_prop_func": ["Map", "Const"],
+    "dim_prop_func": [{"Map": {}}, {"Const": {}}],
     "data_": {
       "[0, 0]": "-1",
       "[1, 0]": "-2"
@@ -224,7 +224,7 @@ marks `mb_` as symbolic; `symbolicDimInfo_` constrains the valid runtime range:
         "component_": "hbm",
         "isStartAddrSymbolic_": true,
         "startAddressCoreCorelet_": {
-          "dim_prop_func": ["Const"],
+          "dim_prop_func": [{"Const": {}}],
           "data_": { "[0, 0]": "-2" }
         }
       },
@@ -235,7 +235,7 @@ marks `mb_` as symbolic; `symbolicDimInfo_` constrains the valid runtime range:
         "component_": "hbm",
         "isStartAddrSymbolic_": true,
         "startAddressCoreCorelet_": {
-          "dim_prop_func": ["Const"],
+          "dim_prop_func": [{"Const": {}}],
           "data_": { "[0, 0]": "-3" }
         }
       }
@@ -309,7 +309,7 @@ module {
   "component_": "hbm",
   "isStartAddrSymbolic_": true,
   "startAddressCoreCorelet_": {
-    "dim_prop_func": ["Map", "Const"],
+    "dim_prop_func": [{"Map": {}}, {"Const": {}}],
     "data_": {
       "[0, 0]": "-2",
       "[1, 0]": "-3"
@@ -326,7 +326,7 @@ module {
   "component_": "hbm",
   "isStartAddrSymbolic_": true,
   "startAddressCoreCorelet_": {
-    "dim_prop_func": ["Map", "Const"],
+    "dim_prop_func": [{"Map": {}}, {"Const": {}}],
     "data_": {
       "[0, 0]": "-4",
       "[1, 0]": "-5"

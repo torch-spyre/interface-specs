@@ -119,14 +119,14 @@
           "computeOp_": [
             {
               "exUnit": "sfp",
-              "opFuncName": "gelu",
+              "opFuncName": "gelufwd",
               "attributes_": {
                 "dataFormat_": "SEN169_FP16",
                 "fidelity_": "regular"
               },
               "location": "Inner",
-              "inputLabeledDs": ["input"],
-              "outputLabeledDs": ["output"]
+              "inputLabeledDs": ["input-idx0"],
+              "outputLabeledDs": ["output-idx1"]
             }
           ]
         }

@@ -504,9 +504,9 @@ scf.for %iterator = %lower_bound to %upper_bound step %step {
 
 **Constraints:**
 
-- The lower bound and step must be compile-time constants. The upper bound may
-  be a compile-time constant or a symbolic value. Parametric loops
-  do not support a symbolic upper bound.
+- The lower bound, upper bound, and step of every `scf.for` loop must all be
+  resolvable to compile-time constants (via constant folding). No symbolic or
+  runtime loop bounds are supported in any loop kind, including parametric loops.
 - Loop-carried variables are not supported. The induction variable may be used
   freely inside the loop body (e.g. as an operand to `affine.apply` or
   `arith.addi` to compute per-iteration addresses).
@@ -535,9 +535,8 @@ scf.for %i = %c0 to %c8 step %c1 {
 **Description:**
 
 Defines a compile-time constant SSA value. In the SDSC Bundle context this is
-primarily used to define base addresses, loop lower bounds, loop step values,
-and sub-allocation offsets. Loop upper bounds may also be symbolic (see
-`scf.for` constraints).
+primarily used to define base addresses, loop lower bounds, loop upper bounds,
+loop step values, and sub-allocation offsets.
 
 **Syntax:**
 
@@ -704,6 +703,44 @@ This calculates a memory address by:
 1. Starting at base address (65536)
 2. Adding iteration offset (1024 bytes per iteration × 3)
 3. Adding core-specific offset (256 bytes per core × 2)
+
+## Validation
+
+Bundle `.mlir` files are enforced at two levels:
+
+### 1. Structural constraints — checked by the MLIR verifier
+
+The following are enforced by the `sdscbundle` dialect verifier and the
+MLIR parse infrastructure. Violations are reported as parse or verification
+errors before the bundle is processed:
+
+- Only operations from the following dialects are permitted:
+  `sdscbundle`, `affine`, `arith`, `func`, `math`, `scf`. Any other
+  dialect is a parse error.
+- The number of operands to `sdscbundle.sdsc_execute` must equal the
+  length of `symbol_ids`.
+- `sdscbundle.device_mem_allocate`: `size` must be a positive integer.
+- `sdscbundle.input_arg_extract`: the source operand must be a
+  `func.func` block argument of type `!sdscbundle.input_arg<index>`.
+  Extracting `granularity` or `max_value` is only valid when those
+  annotations are declared on the parameter type.
+- `func.func` parameters must be of type `index` or
+  `!sdscbundle.input_arg<index>`.
+
+### 2. Semantic constraints — checked during pipeline processing
+
+The following are enforced by the backend pipeline after structural
+verification passes. Violations result in a backend error during
+compilation:
+
+- All `scf.for` bounds (lower, upper, and step) must be resolvable to
+  compile-time constants. No symbolic or runtime loop bounds are
+  supported.
+- Symbol IDs must be unique across the entire bundle — the same ID
+  cannot appear in two different `sdscbundle.sdsc_execute` calls unless
+  both supply the same value.
+- `sdsc_filename` paths must resolve relative to the `.mlir` file
+  location.
 
 ---
 

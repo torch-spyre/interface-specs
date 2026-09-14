@@ -139,6 +139,24 @@ All other precision formats follow BatchMatmul constraints.
   - DL16 to FP32: 2 output sticks per input stick
   - FP8 to DL16: 2 output sticks per input stick
 
+## Stick Altering Data Shuffle
+
+**Operation:** `ReStickifyOpHBM`
+
+Restickify converts a tensor from one stick layout to another — used when the
+graph contains a reshape or layout change that requires re-tiling the data
+(e.g. after a `VirtualReshape`). The `HBM` suffix indicates that data flows
+through HBM during the conversion; this path is taken when the scheduler
+cannot keep the conversion entirely on-chip. (An LX-only variant,
+`ReStickifyOpLx`, exists for the on-chip case but is not part of this API.)
+
+**Constraints:**
+
+- Input stick must contain elements from exactly **one** dimension (`d1`).
+- Output stick must contain elements from exactly **one** dimension (`d2`).
+- `d1` and `d2` may be any primary dimensions — there is no restriction on which dimensions are chosen.
+- Only DF16 precision is supported.
+
 ---
 
 | [← Previous: Padding](padding.md) | [↑ Table of Contents](README.md) | [Next: DesignSpaceConfig →](designspaceconfig.md) |

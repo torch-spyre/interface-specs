@@ -43,6 +43,7 @@ Each entry in `dscs_` is a single-key object — the key is the operation name
   "dimToSymbolMappingOpcodeCorrection_":   <map<string, string>>,
   "inputSymbolsAndTags_":                  <map<string, string>>,
   "symbolDefinitions_":                    <object>,
+  "datadscs_":                             [<object>, ...],
   "coreIdToDsc_":                          <map<string, int>>,
   "numWkSlicesPerDim_":                    <map<string, int>>,
   "coreIdToWkSlice_":                      <map<string, map<string, int>>>,
@@ -66,10 +67,11 @@ Six fields are required. No additional properties are allowed.
 | `dimToSymbolMappingOpcodeCorrection_` | map&lt;string, string&gt; | No | Keys: dim names | Symbol mapping corrections applied during opcode generation. Keys are dimension names; values are corrected symbol names. |
 | `inputSymbolsAndTags_` | map&lt;string, string&gt; | No | Keys: symbol names | Input symbols and their associated tags for symbolic dimension resolution. |
 | `symbolDefinitions_` | object | No | — | Variable definitions for symbolic dimensions used across the bundle. |
+| `datadscs_` | array of object | No | — | Array of data-operation DSCs (e.g. transpose, slice) attached to this `SuperDsc`. Each element is imported by the backend as a `DataOpDsc`. The frontend only emits this field when symbolic dimensions are present, and always as an empty array `[]`; consumers must tolerate its absence. The `datadsc_idx` (first integer) in each `coreIdToDscSchedule` step tuple indexes into this array. |
 | `coreIdToDsc_` | map&lt;string, integer&gt; | Yes | Keys: `^[0-9]+$`; values >= 0 | Maps each core ID (string integer) to a zero-based index into `dscs_`. Multiple cores with the same index share one `DesignSpaceConfig`. |
 | `numWkSlicesPerDim_` | map&lt;string, integer&gt; | No | Keys: dim names; values >= 1 | Total number of work slices per dimension across all cores. |
 | `coreIdToWkSlice_` | map&lt;string, map&lt;string, integer&gt;&gt; | No | Outer keys: core IDs; inner keys: dim names; values >= 0 | Maps each core ID to a map of dimension name → work slice index assigned to that core. |
-| `coreIdToDscSchedule` | map&lt;string, array&lt;array&lt;int&gt;&gt;&gt; | Yes | Keys: `^[0-9]+$`; inner arrays: exactly 4 integers | Per-core execution schedule. Each inner array is a step tuple `[datadsc_idx, dldsc_idx, before_sync, after_sync]`: data DSC index, data-load DSC index, barrier before step (0 = none), barrier after step (0 = none). |
+| `coreIdToDscSchedule` | map&lt;string, array&lt;array&lt;int&gt;&gt;&gt; | Yes | Keys: `^[0-9]+$`; inner arrays: exactly 4 integers | Per-core execution schedule. Each inner array is a step tuple `[datadsc_idx, dldsc_idx, before_sync, after_sync]`: data DSC index (indexes into `datadscs_`), data-load DSC index, barrier before step (0 = none), barrier after step (0 = none). |
 | `dscs_` | array of object | Yes | >= 1 item | Array of Design Space Configurations. Each entry is a single-key object `{"<op_name>": <DesignSpaceConfig>}` — see [`DesignSpaceConfig`](designspaceconfig.md). |
 
 **Note on field naming:** `coreIdToDscSchedule` lacks the trailing underscore used by most other

@@ -42,7 +42,7 @@ Root Object (Dynamic operation name key, e.g., "exp", "matmul")
      │                   ├─── kind: "rewrite"|"fusion"|"decomposition"|"clone"|"remap" (required)
      │                   ├─── pass_name: string (required)
      │                   └─── reason: string | null (required)
-     ├─── datadscs_: Array<Object>
+     ├─── datadscs_: Array<Object>   (data-op DSCs; always [] when present; indexed by datadsc_idx in coreIdToDscSchedule)
      ├─── coreIdToDsc_: Object<coreId → dscIndex> (required)
      ├─── numWkSlicesPerDim_: Object<dimension → sliceCount>
      ├─── coreIdToWkSlice_: Object<coreId → Object<dimension → sliceIndex>>

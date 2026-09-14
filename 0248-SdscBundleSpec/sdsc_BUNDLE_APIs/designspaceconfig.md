@@ -33,6 +33,7 @@ that array, determining which DSC each core executes.
   "dimToSymbolMapping_": <map<string, array<string>>>,
   "coordinateMasking_":  <object>,
   "maskingConstId_":     <int>,
+  "pdsRelation_":        {"isPdsReuse": 0 | 1},
   "dataStageParam_":     <map<string, DataStageParam>>,
   "primaryDsInfo_":      <map<string, PrimaryDsInfo>>,
   "scheduleTree_":       [<ScheduleTreeNode>, ...],
@@ -55,6 +56,7 @@ Six fields are required. No additional properties are allowed.
 | `dimToSymbolMapping_` | map&lt;string, array&lt;string&gt;&gt; | No | Keys: dim names | Mapping from dimension names to symbolic variable names for symbolic dimension support. |
 | `coordinateMasking_` | object | No | — | Coordinate masking configuration for masked operations. |
 | `maskingConstId_` | integer | No | >= -1 | Index into `constantInfo_` of the masking constant, or `-1` when the operation has no masking constant. `-1` is the default. |
+| `pdsRelation_` | object | No | — | Relationship between the input and output primary data structures. Contains a single sub-field `isPdsReuse` (`0` or `1`): `1` means the input and output share the same memory buffer (in-place/reuse); `0` means they are separate buffers. Defaults to `1` (in-place) when absent. Only emitted by the frontend for pool and window operations. |
 | `dataStageParam_` | map&lt;string, object&gt; | No | Keys: `^[0-9]+$` (core ID) | Data staging parameters per core. Each value has `ss_` (steady-state dimensions) and `el_` (epilogue dimensions). See [DataStageParam](datastageparam.md). |
 | `primaryDsInfo_` | map&lt;string, object&gt; | No | Keys: `^[A-Z_]+$` (dsType) | Per-tensor-type layout info. Each value has `layoutDimOrder_`, `stickDimOrder_`, and `stickSize_`. See [PrimaryDsInfo](primarydsinfo.md). |
 | `scheduleTree_` | array of [ScheduleTreeNode](scheduletreenode.md) | Yes | — | Ordered list of memory allocation and compute schedule nodes. |

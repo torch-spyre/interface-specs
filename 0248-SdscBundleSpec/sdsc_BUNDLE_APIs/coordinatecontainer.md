@@ -33,10 +33,10 @@ It groups the coordinate info for all dimensions of a tensor alongside the core-
 
 ## Fields
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `coordInfo` | `map<string, CoordinateInfo>` | No | Per-dimension coordinate information. Keys are dimension names (pattern `^[a-z_][a-z0-9_]*$`, e.g. `mb`, `kb`). See [CoordinateInfo](coordinateinfo.md). |
-| `coreIdToWkSlice_` | `object` | No | Maps each core ID (as a string integer key) to a map of dimension name → work slice index assigned to that core for that dimension. |
+| Field | Type | Required | Constraints | Description |
+|---|---|---|---|---|
+| `coordInfo` | `map<string, CoordinateInfo>` | No | Keys: `^[a-z_][a-z0-9_]*$` | Per-dimension coordinate information. Keys are dimension names (e.g. `mb`, `kb`). See [CoordinateInfo](coordinateinfo.md). |
+| `coreIdToWkSlice_` | `object` | No | Outer keys: string integers (core IDs) | Maps each core ID to a map of dimension name → work slice index assigned to that core for that dimension. |
 
 ## Example
 
