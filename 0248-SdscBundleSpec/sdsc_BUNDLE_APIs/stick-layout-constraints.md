@@ -18,17 +18,17 @@ The BatchMatmul operation has 4 types of semantic dimensions:
 **Output Tensor:**
 
 - Stick: `[generated_dim=64]`
-- Format: Always DL16
+- Format: Always SEN169_FP16
 
 **Input1 Tensor:**
 
-- DL16: `[reduction_dim=64]`
+- SEN169_FP16: `[reduction_dim=64]`
 - FP8/INT8: `[reduction_dim=128]`
 - INT4: `[reduction_dim=16, preserved_dim=2, reduction_dim=8]` (256 elements total)
 
 **Input2 Tensor:**
 
-- DL16: `[generated_dim=64]`
+- SEN169_FP16: `[generated_dim=64]`
 - FP8/INT8: `[reduction_dim=2, generated_dim=64]`
 - INT4: `[reduction_dim=4, generated_dim=64]`
 
@@ -61,9 +61,9 @@ All other precision formats follow BatchMatmul constraints.
 
 **Constraints:**
 
-- All inputs and outputs must have same stick layout
-- Any stick layout is acceptable
-- If input has broadcast along stick dimension, size of that dimension must equal number of elements in stick (with only one valid element)
+- Any stick layout is acceptable, but all inputs and outputs must have the same stick layout.
+- If a stick dimension has broadcast in a tensor, all stick dimensions of that tensor must have broadcast.
+- If a stick dimension has broadcast in all tensors (inputs and output), then its size in the SDSC must be set to the number of elements that one stick would have if that dimension actually existed.
 
 ## Scan Operations
 
@@ -94,7 +94,7 @@ All other precision formats follow BatchMatmul constraints.
 **Input Constraints:**
 
 - Input must have only one dimension in stick:
-  - DL16: `[inpdim=64]`
+  - SEN169_FP16: `[inpdim=64]`
   - FP32: `[inpdim=32]`
 
 **Output Stick Layouts by Family:**
@@ -136,8 +136,8 @@ All other precision formats follow BatchMatmul constraints.
 
 - Both input and output must have the same single dimension in stick
 - For every stick of input, multiple sticks will be produced:
-  - DL16 to FP32: 2 output sticks per input stick
-  - FP8 to DL16: 2 output sticks per input stick
+  - SEN169_FP16 to FP32: 2 output sticks per input stick
+  - FP8 to SEN169_FP16: 2 output sticks per input stick
 
 ## Stick Altering Data Shuffle
 
@@ -146,16 +146,54 @@ All other precision formats follow BatchMatmul constraints.
 Restickify converts a tensor from one stick layout to another — used when the
 graph contains a reshape or layout change that requires re-tiling the data
 (e.g. after a `VirtualReshape`). The `HBM` suffix indicates that data flows
-through HBM during the conversion; this path is taken when the scheduler
-cannot keep the conversion entirely on-chip. (An LX-only variant,
-`ReStickifyOpLx`, exists for the on-chip case but is not part of this API.)
+through HBM during the conversion.
 
 **Constraints:**
 
 - Input stick must contain elements from exactly **one** dimension (`d1`).
 - Output stick must contain elements from exactly **one** dimension (`d2`).
 - `d1` and `d2` may be any primary dimensions — there is no restriction on which dimensions are chosen.
-- Only DF16 precision is supported.
+- Only SEN169_FP16 precision is supported.
+
+---
+
+## Core Work Division Constraints
+
+Any constituent dimension of an operation may be split across cores. The
+constraints below apply to the work assigned per core and must be satisfied
+regardless of how the split is determined.
+
+### Data Tensors
+
+| Constraint | Detail |
+|---|---|
+| **Stick-multiple alignment** | The per-core work extent in every dimension that is present in the stick must be a multiple of the stick size for that dimension. |
+| **DDR address span** | The contiguous range of device memory a single core addresses for any given tensor must not exceed **256 MB**. This is the per-core addressable range limit, separate from the 2 MB on-core LX scratchpad. |
+
+> **Note:** When tensors of different data types share a stick variable, the
+> stick-alignment check uses the largest `elems_per_stick` value across those
+> tensors. Code that assumes 64 fp16 elements per stick is fp16-specific; the
+> general limit is 128 bytes per stick regardless of dtype.
+
+### Index Tensors (indirect access)
+
+The stick-multiple alignment constraint does **not** apply to index tensors
+used for indirect access. Instead, for each dimension present in the stick of
+an index tensor, the per-core work extent must satisfy one of the following:
+
+- It spans an **integral number of sticks** — the extent is an exact multiple
+  of the stick size for that dimension, or
+- It spans **fewer than one full stick** — the extent is strictly less than the
+  stick size for that dimension.
+
+A partial extent that covers more than one stick but is not a whole multiple of
+the stick size is not permitted.
+
+### Reduction Operations with Multiple Reduction Dimensions
+
+When an operation reduces across more than one dimension, **only one** of its
+reduction dimensions may be split across cores. There is no restriction on
+operations that reduce along a single dimension.
 
 ---
 

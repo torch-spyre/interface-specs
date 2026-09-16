@@ -228,7 +228,11 @@ sdscbundle.sdsc_execute (%operand1, %operand2, ...) {
   positionally to one operand and corresponds to a symbolic start address or
   size inside the JSON. Symbol IDs must be unique across the entire bundle —
   the same ID cannot be reused in a different `sdsc_execute` call unless both
-  invocations assign the same value to that symbol.
+  invocations assign the same value to that symbol. **Exception:** inside an
+  `scf.for` loop, the same symbol IDs may be reused across iterations because
+  the loop iterator provides the per-iteration uniqueness — each iteration
+  resolves to a distinct runtime value via the operand expressions (e.g.
+  `affine.apply`).
 
 **Returns:** None.
 
@@ -237,7 +241,9 @@ sdscbundle.sdsc_execute (%operand1, %operand2, ...) {
 - The number of operands must equal the length of `symbol_ids`.
 - Symbol IDs must be unique within a bundle (i.e., the same ID cannot be reused
   across different `sdsc_execute` calls unless both invocations assign the same
-  value to that symbol).
+  value to that symbol). Inside an `scf.for` loop body, symbol IDs may be
+  reused across iterations — the loop iterator provides per-iteration
+  uniqueness.
 
 **Examples:**
 
@@ -279,11 +285,12 @@ exponents of all elements.*
 ```mlir
 module {
   func.func @sdsc_bundle() {
-    sdscbundle.sdsc_execute () {sdsc_filename="sdsc_0_maxnonstick.json"}
+    sdscbundle.sdsc_execute () {sdsc_filename="sdsc_0_max.json"}
     sdscbundle.sdsc_execute () {sdsc_filename="sdsc_1_sub.json"}
     sdscbundle.sdsc_execute () {sdsc_filename="sdsc_2_exp.json"}
-    sdscbundle.sdsc_execute () {sdsc_filename="sdsc_3_sumnonstick.json"}
-    sdscbundle.sdsc_execute () {sdsc_filename="sdsc_4_realdiv.json"}
+    sdscbundle.sdsc_execute () {sdsc_filename="sdsc_3_sum.json"}
+    sdscbundle.sdsc_execute () {sdsc_filename="sdsc_4_reciprocal.json"}
+    sdscbundle.sdsc_execute () {sdsc_filename="sdsc_5_mul.json"}
     return
   }
 }
@@ -738,7 +745,9 @@ compilation:
   supported.
 - Symbol IDs must be unique across the entire bundle — the same ID
   cannot appear in two different `sdscbundle.sdsc_execute` calls unless
-  both supply the same value.
+  both supply the same value. Inside an `scf.for` loop body, the same
+  symbol IDs may be reused across iterations; the loop iterator provides
+  per-iteration uniqueness.
 - `sdsc_filename` paths must resolve relative to the `.mlir` file
   location.
 

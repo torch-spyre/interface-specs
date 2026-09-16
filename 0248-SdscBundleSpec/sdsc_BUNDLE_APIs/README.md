@@ -1,8 +1,6 @@
 # SDSC Bundle API Documentation
 
 **Spec Version:** 1.0.0
-**Last Updated:** 2026-09-09
-**Git Baseline:** `fcd337a`
 **Status:** Active
 
 > Version numbers follow [Semantic Versioning](https://semver.org/):
@@ -49,6 +47,7 @@ Documents are organized in the recommended reading order, grouped by learning st
 |---|---------|------|
 | 3.1 | SDSC JSON API | [SDSC-json-api.md](SDSC-json-api.md) |
 | 3.2 | Object Hierarchy | [JSON-object-Hierarchy.md](JSON-object-Hierarchy.md) |
+| 3.3 | JSON Schema (normative) | [json-schema.md](json-schema.md) |
 
 ---
 
@@ -102,6 +101,7 @@ Documents are organized in the recommended reading order, grouped by learning st
 | # | Section | File |
 |---|---------|------|
 | 7.1 | Complete Example (JSON) | [complete-example.md](complete-example.md) |
+| 7.2 | Indirect Access Example (JSON) | [indirect-access-example.md](indirect-access-example.md) |
 
 ---
 

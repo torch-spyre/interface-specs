@@ -14,5 +14,5 @@
 
 ---
 
-| [← Previous: Complete Example (JSON)](complete-example.md) | [↑ Table of Contents](README.md) | |
+| [← Previous: Indirect Access Example (JSON)](indirect-access-example.md) | [↑ Table of Contents](README.md) | |
 |:--|:--:|--:|

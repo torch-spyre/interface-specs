@@ -2,11 +2,11 @@
 
 The SuperDSC-Bundle API defines the interface between [torch-spyre](https://torch-spyre.readthedocs.io/) frontend compiler to PyTorch and the Spyre backend compiler ([Deeptools](https://research.ibm.com/publications/deeptools-compiler-and-execution-runtime-extensions-for-rapid-ai-accelerator)) that generates the code to run on the [IBM Spyre AI Accelerator](https://research.ibm.com/blog/lifting-the-cover-on-the-ibm-spyre-accelerator). 
 
-SuperDSC stand for ***Super Design Space Configuration*** and is a JSON based IR designed to describe the tile-level compute graph for the 32 cores of Spyre.
+SuperDSC stands for ***Super Design Space Configuration*** and is a JSON-based IR designed to describe the tile-level compute graph for the 32 cores of Spyre.
 A SuperDSC-Bundle enables the expression of data-parallel mappings for complex kernels across multi-core accelerators.
 Follow the link for a description of the [SuperDSC-Bundle Interface Specification](https://github.com/torch-spyre/interface-specs/blob/main/0248-SdscBundleSpec/SuperDSC-Bundle.md).
 
-The Figure below illustrates what is called the Spyre Stack where a user written PyTorch program is compiled by torch-spyre to generate a sets of files known as the **SuperDSC-Bundle**. A PyTorch file may translate into several SuperDSC-Bundles, each one being composed of a ***bundle.mir*** file and several ***sdsc_\*.json*** files, each json file describing a torch operation (A full list of supported PyTorch operations can be found in [torch-spyre](https://torch-spyre.readthedocs.io/)). 
+The figure below illustrates what is called the Spyre Stack where a user-written PyTorch program is compiled by torch-spyre to generate a set of files known as the **SuperDSC-Bundle**. A PyTorch file may translate into several SuperDSC-Bundles, each one being composed of a ***bundle.mlir*** file and several ***sdsc_\*.json*** files, each JSON file describing a torch operation (a full list of supported PyTorch operations can be found in [torch-spyre](https://torch-spyre.readthedocs.io/)).
 Each SuperDSC-Bundle is compiled by **DeepTools** to generate the assembly code that runs on the Spyre AI Accelerator Card. Furthermore, the compiler also generates the execution plan that manages the execution of an operation as well as intra-memory data movement on the Spyre Card.
 
 ![High-Level View of SuperDSC-Bundle API within torch-spyre stack](figures/torch_spyre_backend_flow.png)
@@ -16,7 +16,7 @@ Each SuperDSC-Bundle is compiled by **DeepTools** to generate the assembly code 
 SuperDSC is a self-contained compiled artifact that describes everything the Spyre hardware needs to execute a single scheduled operation deterministically. The top-level structure contains core fold properties, work-slice mappings, and a per-core execution schedule. A `dscs_` array holds one or more DesignSpaceConfig entries. Each entry is a complete description of one compute configuration, and contains the following elements.
 
 - **Core fold properties** (`coreFoldProp_`, `numWkSlicesPerDim_`, `coreIdToWkSlice_`): how to divide the iteration space across 32 cores. For a tensor of shape (1024, 256), this encodes how many rows each core processes. The encoding gives each core an equal number of sticks and keeps each core within its addressable device memory limit.
-- **Tensor descriptors** (`labeledDs_`, `primaryDsInfo_`): for each tensor argument, the tiling structure define which dimensions are stick dimensions, how the host-side shape maps to device-side tiles, memory residency (HBM vs. LX scratchpad), data format, and which dimensions each tensor iterates over fully vs. which are summed over (contracted) as in the K dimension of a matmul.
+- **Tensor descriptors** (`labeledDs_`, `primaryDsInfo_`): for each tensor argument, the tiling structure defines which dimensions are stick dimensions, how the host-side shape maps to device-side tiles, memory residency (HBM vs. LX scratchpad), data format, and which dimensions each tensor iterates over fully vs. which are summed over (contracted) as in the K dimension of a matmul.
 - **Schedule tree** (`scheduleTree_`): a list of allocate nodes (one per tensor) that specify memory placement (HBM or LX scratchpad), dimension ordering, per-core start addresses via fold mappings, and coordinate information encoding how each dimension is split across cores with affine transformations.
 - **Data staging** (`dataStageParam_`): per-core dimension sizes for steady-state and epilogue passes, describing how data is partitioned for transfer into scratchpad.
 - **Compute operations** (`computeOp_`): one entry per operation, encoding the execution unit (PT or SFP), operation name, data format, fidelity, and the input/output tensor references from labeledDs_.
@@ -59,6 +59,12 @@ The API consists of two primary components:
 1. **MLIR Bundle File** (`.mlir`) — Orchestrates execution flow and symbol management
 2. **SDSC JSON Files** (`.json`) — Defines individual operations and their core mappings
 
+All `sdsc_*.json` files must conform to the [SDSC Bundle JSON Schema](json-schema.md).
+The schema provides machine-readable type constraints, required-field enforcement, and enum
+validation for every object in the hierarchy. It is the normative reference for structural
+correctness; semantic constraints (cross-field consistency) are described in the individual
+object pages linked from [SDSC JSON API](SDSC-json-api.md).
+
 ## Important Notes
 
 ### Data Shuffle Operations Support
@@ -74,7 +80,6 @@ DesignSpaceConfig can represent **BOTH** deep learning operators AND data-shuffl
 
 - Data in one core can be directly available for compute in another core
 - The backend compiler will ensure proper data movement across cores
-- **Current Limitation:** This functionality is not yet available in the backend; it will be implemented in a future iteration
 
 ---
 

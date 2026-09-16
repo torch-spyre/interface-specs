@@ -17,6 +17,156 @@ in [README.md](README.md), and add a one-line summary entry to the
 
 ## Unreleased Changes
 
+### Task — Fix coreIdToDscSchedule tuple semantics (M-9) (2026-09-17)
+
+| File | Change |
+|---|---|
+| `superdsc-object.md` | Correct `datadsc_idx` — indexes into `dscs_` (not `datadscs_`), `-1` = no data DSC. Correct `dldsc_idx` — indexes into `dscs_`, `-1` = none; document `before_sync`/`after_sync` as `0`/`1`. Remove incorrect cross-reference from `datadscs_` description. Update example tuples from `[0, 0, 0, 0]` to `[-1, 0, 0, 0]` and expand example explanation with per-field names. |
+
+---
+
+### Task — Clarify symbol ID uniqueness rule for scf.for loop bodies (M-7) (2026-09-16)
+
+| File | Change |
+|---|---|
+| `MLIR-bundle-API.md` | Add loop-reuse exception to symbol ID uniqueness rule in three locations: `symbol_ids` attribute description, Constraints block, and Semantic constraints section. Clarifies that the same symbol IDs may be reused across `scf.for` iterations because the loop iterator provides per-iteration uniqueness. M-7 closed as false positive. |
+
+---
+
+### Task — Fix tensor naming convention in complete-example.md (B-3) (2026-09-16)
+
+| File | Change |
+|---|---|
+| `complete-example.md` | Rename tensors from bare `"input"` / `"output"` to `"gelu-Tensor0"` / `"gelu-Tensor1"` to match the `"<op>-Tensor<N>"` convention used in all other examples. Update `inputLabeledDs` and `outputLabeledDs` references in `computeOp_` accordingly (`"gelu-Tensor0-idx0"`, `"gelu-Tensor1-idx1"`). |
+
+---
+
+### Task — Align softmax decomposition to 6-step max/sub/exp/sum/reciprocal/mul (M-11) (2026-09-16)
+
+| File | Change |
+|---|---|
+| `MLIR-bundle-API.md` | Replace 5-step softmax example (`maxnonstick`, `sumnonstick`, `realdiv`) in the `sdscbundle.sdsc_execute` sequential operations example with the canonical 6-step decomposition (`max`, `sub`, `exp`, `sum`, `reciprocal`, `mul`) used in `MLIR-bundle-usage-examples.md` and `MLIR-complete-example.md` |
+
+---
+
+### Task — Add dataStageParam_ and coordinates_ to complete-example.md (M-6) (2026-09-16)
+
+| File | Change |
+|---|---|
+| `complete-example.md` | Add `dataStageParam_` (key `"0"`, name `"core"`, `ss_`/`el_` = `{mb_: 16, out_: 128}` — even 2-way split). Add `coordinates_` to both allocate nodes: `mb` as 2-way core-split non-stick dimension (`core_fold factor=2, alpha=16, elem_arr_0 factor=16`); `out` as unsplit stick dimension (`core_fold factor=1, alpha=128, elem_arr_0 factor=64, elem_arr_1 factor=2`). Add missing `prev_: "input_alloc"` on `output_alloc` node. |
+
+---
+
+### Task — Restore spec-accurate broadcast stick constraint wording (M-3) (2026-09-16)
+
+| File | Change |
+|---|---|
+| `stick-layout-constraints.md` | Restore Unary and Broadcast Operations constraints to match `SuperDSC-Bundle.md` verbatim: split the collapsed single bullet back into three sentences — (1) any layout acceptable but all tensors must share it, (2) if any stick dimension has broadcast in a tensor all stick dimensions of that tensor must have broadcast, (3) if a stick dimension has broadcast in all tensors its size must equal the number of elements one full stick would have. Remove the erroneous "with only one valid element" qualifier that was not in the spec. |
+
+---
+
+### Task — Replace remaining DL16 format references with SEN169_FP16 in stick-layout-constraints.md (2026-09-16)
+
+| File | Change |
+|---|---|
+| `stick-layout-constraints.md` | Replace 6 remaining `DL16` format references with `SEN169_FP16`: BatchMatmul output format, Input1/Input2 per-precision stick entries, quantization input stick constraint, and up-casting operation descriptions. OpFunc identifier strings (`DL16TOFP32`, `FP32TODL16`, `FP8TODL16`) in `computeoperation.md` are left unchanged as they are normative JSON string values. |
+
+---
+
+### Task — Remove ReStickifyOpLx reference from stick-layout-constraints.md (2026-09-16)
+
+| File | Change |
+|---|---|
+| `stick-layout-constraints.md` | Remove parenthetical sentence mentioning `ReStickifyOpLx` from the Stick Altering Data Shuffle section |
+
+---
+
+### Task — Replace all DF16 references with SEN169_FP16 in API docs (2026-09-16)
+
+| File | Change |
+|---|---|
+| `computeoperation.md` | Replace all 90 occurrences of `DF16` with `SEN169_FP16` in the Supported Operations table (Precision and Notes columns) |
+| `stick-layout-constraints.md` | Replace 1 occurrence of `DF16` with `SEN169_FP16` in the Stick Altering Data Shuffle constraints |
+
+---
+
+### Task — Add json-schema.md wrapper page for sdscbundle-schema.json (2026-09-16)
+
+| File | Change |
+|---|---|
+| `json-schema.md` | **New file.** Markdown wrapper for `sdscbundle-schema.json`: describes the schema's role and enforcement scope, reproduces the version history from the schema's `$comment` field, links to the raw JSON file, and carries the standard navigation footer |
+| `README.md` | Update section 3.3 to link to `json-schema.md` instead of the raw `sdscbundle-schema.json` |
+| `JSON-object-Hierarchy.md` | Update "Next" footer to point to `json-schema.md` |
+| `superdsc-object.md` | Update "Previous" footer to point to `json-schema.md` |
+| `Overview.md` | Update schema link to point to `json-schema.md` |
+| `SDSC-json-api.md` | Update schema link to point to `json-schema.md` |
+
+---
+
+### Task — Add sdscbundle-schema.json to README Table of Contents (2026-09-16)
+
+| File | Change |
+|---|---|
+| `README.md` | Add section 3.3 "JSON Schema (normative)" linking to `sdscbundle-schema.json` in Stage 3 — JSON Layer Fundamentals |
+
+---
+
+### Task — Overview.md typo fixes, remove Current Limitation note, trim README header (2026-09-16)
+
+| File | Change |
+|---|---|
+| `Overview.md` | Fix typos: "stand" → "stands", "JSON based" → "JSON-based", "a sets" → "a set", "user written" → "user-written", "bundle.mir" → "bundle.mlir", "json file" → "JSON file", sentence-case "Figure" → "figure" and "A full list" → "a full list", "tiling structure define" → "tiling structure defines" |
+| `Overview.md` | Remove "Current Limitation" bullet from the Tensor Allocation vs Work Division section — the backend now supports cross-core data movement |
+| `README.md` | Remove `Last Updated` and `Git Baseline` fields from the header; retain only `Spec Version` and `Status` |
+
+---
+
+### Task — Add schema reference, indirect-access example, and navigation fixes (2026-09-16)
+
+| File | Change |
+|---|---|
+| `Overview.md` | Add paragraph under "API Components" stating that all `sdsc_*.json` files must conform to `sdscbundle-schema.json`; link to the schema file; distinguish structural (schema) from semantic (doc) constraints |
+| `SDSC-json-api.md` | Add blockquote callout at the top of the Introduction linking to `sdscbundle-schema.json` as the normative structural reference |
+| `indirect-access-example.md` | **New file.** End-to-end JSON example for a single-core `topkvalue` (Top-K gather) operation demonstrating indirect-access tensors: four-tensor pattern (`INPUT`, `OUTPUT`, `KERNEL` value tensor, `KERNEL_IDX` index tensor); `indirectAllocType_` on both allocate nodes; `relatedIndirectAccessAlloc_` cross-links; `indexTensorType_: "index"`; `maxDimSizes_` page size on value tensor; `indirectAccessIndexLabeledDs` on `ComputeOperation`; fully filled `coordinates_` and `startAddressCoreCorelet_` on all nodes; annotation section and memory-layout table |
+| `README.md` | Add section 7.2 "Indirect Access Example (JSON)" pointing to `indirect-access-example.md` in Stage 7 — Worked Examples |
+| `complete-example.md` | Update navigation footer "Next" to point to `indirect-access-example.md` |
+| `reference.md` | Update navigation footer "Previous" to point to `indirect-access-example.md` |
+
+---
+
+### Task — Add Core Work Division Constraints section to stick-layout-constraints.md (2026-09-15)
+
+| File | Change |
+|---|---|
+| `stick-layout-constraints.md` | Add `## Core Work Division Constraints` section with three subsections: **Data Tensors** (stick-multiple alignment, 256 MB DDR span, dtype note), **Index Tensors** (integral-sticks or sub-stick rule), **Reduction Operations with Multiple Reduction Dimensions** (only one reduction dim may be split). Sourced from `SuperDSC-Bundle.md` lines 399–405 and `work_division.txt` / `work_division_analysis.md` in `.ignore/`. `spyre_hint` frontend API excluded as it is transparent to the SDSC artifacts. |
+
+Commit: `62b75c8`
+
+---
+
+### Task — Add Validation sections to MLIR-bundle-API.md and SDSC-json-api.md (2026-09-09)
+
+| File | Change |
+|---|---|
+| `MLIR-bundle-API.md` | Add `## Validation` section at end of reference content: structural constraints (permitted dialects, operand/symbol_ids count, device_mem_allocate size, input_arg_extract source type, func.func parameter types) checked by the MLIR verifier; semantic constraints (constant loop bounds, unique symbol IDs, resolvable sdsc_filename paths) checked during pipeline processing |
+| `SDSC-json-api.md` | Add `## Validation` section at end of reference content: schema validation via `sdscbundle-schema.json`; semantic validation (numCoresUsed_ / coreIdsUsed_ consistency, coreIdToDsc_ index validity, symbol ID / operand correspondence, stick-size work multiple, 256 MB DDR span limit) |
+
+---
+
+### Task — Add Constraints column to coordinatecontainer.md fields table (2026-09-09)
+
+| File | Change |
+|---|---|
+| `coordinatecontainer.md` | Add missing Constraints column to Fields table to match the standard used by all other object docs; move key-pattern constraint from Description into Constraints for `coordInfo`; add outer-key constraint for `coreIdToWkSlice_`. Resolves gap analysis item 12. |
+
+---
+
+### Decision — Item 11 closed as false positive (2026-09-09)
+
+Gap analysis item 11 (orphaned/misaligned heading structure in `MLIR-bundle-API.md`) investigated and closed as a false positive. The three `#` characters flagged as headings are MLIR affine map alias definitions (e.g. `#map_name = affine_map<...>`) inside fenced code blocks — not Markdown headings. The document's actual heading hierarchy (`#` → `##` → `###`) is correct and well-formed. No changes required.
+
+---
+
 ### Task — Fix opFuncName and labeled-DS tensor references in complete-example.md (gap analysis items 9 & 10)
 
 | File | Change |
