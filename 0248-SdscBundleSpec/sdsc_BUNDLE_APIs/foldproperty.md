@@ -45,6 +45,18 @@ Both fields are required. No additional properties are allowed.
 | `factor_` | integer | Yes | >= 1 | Number of equal slices the dimension is divided into at this fold level. A factor of `1` means no splitting at that level. |
 | `label_` | string | Yes | — | Name of the memory hierarchy level. Common values: `"core"`, `"corelet"`, `"time"`, `"core_fold"`, `"corelet_fold"`, `"row_fold"`, `"elem_arr_0"`, `"elem_arr_1"`. |
 
+## Folds Hierarchy
+
+The `dim_prop_attr` labels in coordinate folds (such as `coordinates_.coordInfo.<dim>.folds`) follow a standard memory-hierarchy split:
+
+| Label | Level / Role | Description |
+|---|---|---|
+| `core_fold` | Core level | Split across Spyre cores |
+| `corelet_fold` | Corelet level | Split across corelets within a core |
+| `row_fold` | Row level | Split across rows within a corelet |
+| `elem_arr_0` | Leaf element slice | Number of contiguous elements per innermost slice (or per stick) |
+| `elem_arr_1` | Stick slice | Number of sticks per slice (used for stick dimensions where `elemArr` is 2) |
+
 ## Example
 
 The two required `SuperDsc` fold properties for a 2-core, 2-corelet bundle:

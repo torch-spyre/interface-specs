@@ -17,11 +17,22 @@ in [README.md](README.md), and add a one-line summary entry to the
 
 ## Unreleased Changes
 
-### Task — Fix coreIdToDscSchedule tuple semantics (M-9) (2026-09-17)
+### Task — Document nonUnifiedAllocInHBM_, coreIdToDscSchedule defaults, remove backend padding_, and clarify fold levels (2026-09-17)
 
 | File | Change |
 |---|---|
-| `superdsc-object.md` | Correct `datadsc_idx` — indexes into `dscs_` (not `datadscs_`), `-1` = no data DSC. Correct `dldsc_idx` — indexes into `dscs_`, `-1` = none; document `before_sync`/`after_sync` as `0`/`1`. Remove incorrect cross-reference from `datadscs_` description. Update example tuples from `[0, 0, 0, 0]` to `[-1, 0, 0, 0]` and expand example explanation with per-field names. |
+| `sdscbundle-schema.json` | Add `nonUnifiedAllocInHBM_` boolean/integer(0/1) definition to `ScheduleTreeNode`. Remove backend-only `padding_` property. |
+| `scheduletreenode.md` | Add `nonUnifiedAllocInHBM_` to Structure and Fields tables with dedicated explanation of unified vs. non-unified HBM layout. Remove backend-only `padding_` field and duplicate inline `CoordinateInfo` and `folds hierarchy` tables. |
+| `JSON-object-Hierarchy.md` | Add `nonUnifiedAllocInHBM_` to `ScheduleTreeNode` branch. Remove `padding_`. Document 4-element `coreIdToDscSchedule` step tuple breakdown. |
+| `json-schema.md` | Update schema version history to record the addition of `nonUnifiedAllocInHBM_`. |
+| `superdsc-object.md` | Add Schedule step tuple reference table defining `[datadsc_idx, dldsc_idx, before_sync, after_sync]` with `datadsc_idx = -1` default, `dldsc_idx` index into `dscs_`, and barrier flags. |
+| `SDSC-json-api.md` | Update step 1 to clarify `coreFoldProp_.factor_` is set to a value between 1 and the maximum number of cores in use (resolving B-1). Update step 2 to describe schedule tuple breakdown and default `[-1, 0, 0, 0]`. |
+| `coordinateinfo.md` | Clarify semantic definitions of `spatial`, `temporal`, and `elemArr` levels without confusing "typically 3" assertions. Cross-reference `foldproperty.md#folds-hierarchy`. |
+| `foldproperty.md` | Add dedicated `## Folds Hierarchy` section documenting `core_fold`, `corelet_fold`, `row_fold`, `elem_arr_0`, and `elem_arr_1`. |
+| `complete-example.md`, `indirect-access-example.md` | Update example `coreIdToDscSchedule` tuples from `[[0, 0, 0, 0]]` to standard default `[[-1, 0, 0, 0]]`. |
+| `datastructdims.md`, `sdscbundle-schema.json` | Remove deprecated dimension fields (`r_`, `c_`, `ij_`, `rc_`, `kij_`, `sij_`, `zij_`, `si_`, `sj_`, `zi_`, `zj_`). |
+| `padding.md`, `coordinateinfo.md` | Remove duplicate CoordinateInfo padding section from `padding.md` and consolidate enum value descriptions directly into `coordinateinfo.md`. |
+| `figures/gen_hierarchy.py`, `figures/sdsc_json_hierarchy.png` | Add `nonUnifiedAllocInHBM_` to `ScheduleTreeNode` diagram node and re-render diagram. |
 
 ---
 

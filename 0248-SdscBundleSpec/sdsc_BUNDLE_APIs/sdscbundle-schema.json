@@ -2,9 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/torch-spyre/torch-spyre/sdscbundle-schema.json",
   "title": "SDSC Bundle JSON Schema",
-  "description": "JSON Schema for SDSC Bundle format. This schema covers compute operations (SFP, matmul, BMM, identity) and data operations (transpose, slice).",
-  "version": "1.2.0",
-  "$comment": "Version History: v1.0.0 - Initial schema. v1.0.1 (2026-05-11) - Corrected dsType_ enum to match torch_spyre constants: INPUT, OUTPUT, KERNEL, KERNEL_IDX. v1.1.0 (2026-05-XX) - Added symbolic representation: SymbolicDimInfo def, DimPaddingSizes def, DataStructDims.symbolicDimInfo_/dims_/paddingSizes_, SuperDsc symbolic fields (dimToSymbolMappingOpcodeCorrection_, inputSymbolsAndTags_, symbolDefinitions_), DesignSpaceConfig.dimToSymbolMapping_, ScheduleTreeNode.isStartAddrSymbolic_. v1.1.1 (2026-07-07) - Allow isStartAddrSymbolic_ to accept integer 0/1 in addition to boolean false/true. v1.1.2 (2026-07-07) - Allow DataStructDims direct dimension fields to accept empty object {} in addition to integer >= 1. v1.2.0 (2026-07-08) - Sync DataStructDims/DimPaddingSizes/SymbolicDimInfo with deeptools-schema.json v1.3.0 (source: dsc/dims.h + dsc/dims.cpp exportJson()): DataStructDims: added explicit dim fields (in_, out_, mb_, i_, j_, ki_, kj_, x_, x1_, y_, r_, c_, ij_, rc_, kij_, sij_, zij_, si_, sj_, zi_, zj_), added coreletSplit_, rowSplit_, peSfpSplit_, maxSymbolicVolume_, removed spurious dims_ field. DimPaddingSizes: corrected frontPadding_->padFront_, backPadding_->padBack_, removed kernelDim_, added unneededPad_, unneededPadFront_, unneededPadBack_, totalSize_, dilation_, windowDim_. SymbolicDimInfo: corrected maxValue_->maxSize_. dataStageParam_ per-stage object: added name_ field.",
+  "description": "Input contract for a single SDSC JSON document: the per-operation descriptor that a bundle's MLIR references. Declares the fields a producer may set, their types, and their permitted values.",
+  "version": "1.0.0",
   "type": "object",
   "patternProperties": {
     "^[a-zA-Z0-9_/\\-][a-zA-Z0-9_/\\-]*$": {
@@ -60,7 +59,7 @@
           "description": "Variable definitions for symbolic dimensions"
         },
         "debug_handle_": {
-          "description": "Source-to-kernel provenance for this SuperDsc, emitted by the frontend. null is a normal value, not missing data. Not read by the deeptools loader -- it exists for tooling that maps a kernel back to its source. See DebugHandle.",
+          "description": "Source-to-kernel provenance for this SuperDsc. null is a normal value, not missing data. Consumed by tooling that maps a compiled kernel back to its source; it does not affect compilation. See DebugHandle.",
           "oneOf": [
             {"$ref": "#/$defs/DebugHandle"},
             {"type": "null"}
@@ -68,7 +67,7 @@
         },
         "datadscs_": {
           "type": "array",
-          "description": "Data-operation DSCs (transpose, slice, ...) attached to this SuperDsc. Emitted by the frontend only when symbolic dims are present, always as an empty array; the loader imports each element as a DataOpDsc. Element contents are outside this curated set.",
+          "description": "Data-operation descriptors (transpose, slice, ...) attached to this SuperDsc. Present only when symbolic dimensions are in use, and always as an empty array. Element contents are not specified here.",
           "items": {"type": "object"}
         },
         "coreIdToDsc_": {
@@ -316,12 +315,12 @@
         },
         "maskingConstId_": {
           "type": "integer",
-          "description": "Index into constantInfo_ of the masking constant, or -1 when the operation has none. -1 is DesignSpaceConfig::maskingConstId_'s default and is the common case.",
+          "description": "Index into constantInfo_ of the masking constant, or -1 when the operation has none. -1 is the default and the common case.",
           "minimum": -1
         },
         "pdsRelation_": {
           "type": "object",
-          "description": "Relationships between the primary data structures. Emitted by the frontend for pool/window ops and read by DesignSpaceConfig::importJsonObj.",
+          "description": "Relationships between the primary data structures. Set for pool and window operations.",
           "properties": {
             "isPdsReuse": {
               "type": "integer",
@@ -381,7 +380,7 @@
                 },
                 "stickRepl_": {
                   "type": "array",
-                  "description": "Per-stick-dimension replication counts, parallel to stickDimOrder_. Emitted by the frontend for pool/window ops and read by DesignSpaceConfig::importJsonObj. Defaults to all-ones when absent.",
+                  "description": "Per-stick-dimension replication counts, parallel to stickDimOrder_. Set for pool and window operations. Defaults to all-ones when absent.",
                   "items": {"type": "integer", "minimum": 1}
                 }
               }
@@ -424,7 +423,7 @@
     },
     "DataStructDims": {
       "type": "object",
-      "description": "Data structure dimensions. Serialized by DataStructDims::exportJson() in dsc/dims.cpp. All numeric dim values are doubles (default -1 = unset). Primary dims (in_, out_, mb_, i_, j_, ki_, kj_, x_, x1_, y_) are always serialized. Deprecated dims (r_, c_, ij_, rc_, kij_, sij_, zij_, si_, sj_, zi_, zj_) are serialized unless skipDeprecatedFields=true.",
+      "description": "Data structure dimensions. All numeric dimension values are numbers, with -1 meaning unset. Primary dimensions are in_, out_, mb_, i_, j_, ki_, kj_, x_, x1_, y_.",
       "properties": {
         "name_": {
           "type": "string",
@@ -440,17 +439,6 @@
         "x_": {"type": "number", "description": "Repeat dim that does not add reuse (e.g. attention heads). -1 = unset."},
         "x1_": {"type": "number", "description": "Additional repeat dim (e.g. attention heads). -1 = unset."},
         "y_": {"type": "number", "description": "Kernel reuse dimension (e.g. timestep). -1 = unset."},
-        "r_": {"type": "number", "description": "[deprecated] Input image rows with zero padding. -1 = unset."},
-        "c_": {"type": "number", "description": "[deprecated] Input image cols with zero padding. -1 = unset."},
-        "ij_": {"type": "number", "description": "[deprecated] Output image dimensions rows/cols. -1 = unset."},
-        "rc_": {"type": "number", "description": "[deprecated] Input image rows/cols with zero padding. -1 = unset."},
-        "kij_": {"type": "number", "description": "[deprecated] Kernel dimensions rows/cols. -1 = unset."},
-        "sij_": {"type": "number", "description": "[deprecated] Stride dimensions rows/cols. -1 = unset."},
-        "zij_": {"type": "number", "description": "[deprecated] Zero pad dimensions rows/cols. -1 = unset."},
-        "si_": {"type": "number", "description": "[deprecated] Stride along rows. -1 = unset."},
-        "sj_": {"type": "number", "description": "[deprecated] Stride along cols. -1 = unset."},
-        "zi_": {"type": "number", "description": "[deprecated] Zero pad rows. -1 = unset."},
-        "zj_": {"type": "number", "description": "[deprecated] Zero pad cols. -1 = unset."},
         "symbolicDimInfo_": {
           "type": "object",
           "description": "Per-dimension symbolic size info. Keys are primary dim names (e.g. 'in_', 'mb_'); values are SymbolicDimInfo objects.",
@@ -507,7 +495,7 @@
         },
         "paddingSizes_": {
           "type": "object",
-          "description": "Per-dimension padding information. Keys are primary dim names (e.g. 'r_', 'c_'); values are DimPaddingSizes objects.",
+          "description": "Per-dimension padding information. Keys are primary dim names (e.g. 'i', 'j'); values are DimPaddingSizes objects.",
           "patternProperties": {
             "^[A-Za-z_][A-Za-z0-9_]*$": {
               "$ref": "#/$defs/DimPaddingSizes"
@@ -555,7 +543,14 @@
           "items": {"type": "integer"}
         },
         "isStartAddrSymbolic_": {
-          "description": "When true, start addresses are expressed as symbolic values rather than concrete byte offsets. Written by the backend compiler when symbolic addressing is required. Accepts boolean true/false or integer 1/0.",
+          "description": "When true, start addresses are expressed as symbolic values rather than concrete byte offsets. Set when symbolic addressing is required. Accepts boolean true/false or integer 1/0.",
+          "oneOf": [
+            {"type": "boolean"},
+            {"type": "integer", "enum": [0, 1]}
+          ]
+        },
+        "nonUnifiedAllocInHBM_": {
+          "description": "How an HBM allocation is laid out. False (the default) is unified: the tensor lives in HBM as one tensor covering all cores, sized by N_, and each core's data is a sub-rectangle of it reached from one common start address. True is non-unified: the HBM data each core needs is stored as its own smaller tensor, sized by the per-core \"core\" datastage, and those per-core tensors are placed independently -- not necessarily contiguous, no common stride, possibly at unrelated locations in HBM -- so no unified tensor for the data structure exists. Non-unified implies one start address per core in startAddressCoreCorelet_ (core fold as Map) and an LX-like core fold in the allocation coordinates; the intra-tensor layout description is unchanged. Ignored when component_ is not hbm. Accepts boolean true/false or integer 1/0.",
           "oneOf": [
             {"type": "boolean"},
             {"type": "integer", "enum": [0, 1]}
@@ -567,7 +562,7 @@
         },
         "backGapCore_": {
           "type": "object",
-          "description": "Back-gap size in elements per dimension per core. Written by the backend compiler when tensor.backGap is true. Outer key is a dimension name; inner key is a core ID (as a decimal string); value is the gap size as a decimal string.",
+          "description": "Back-gap size in elements, per dimension per core. Outer key is a dimension name; inner key is a core ID as a decimal string; value is the gap size as a decimal string.",
           "patternProperties": {
             "^[A-Za-z_][A-Za-z0-9_]*$": {
               "type": "object",
@@ -576,10 +571,6 @@
               }
             }
           }
-        },
-        "padding_": {
-          "type": "object",
-          "description": "Padding parameters for this allocation. Written by the backend compiler when the tensor requires memory padding beyond its logical size."
         },
         "indirectAllocType_": {
           "type": "string",
@@ -592,7 +583,7 @@
         },
         "indexTensorType_": {
           "type": "string",
-          "description": "How an index tensor's elements are interpreted: 'index' = element indices, 'address' = precomputed addresses. Emitted only when indirectAllocType_ is 'index_tensor'. Both values of AllocateNode::IndexTensorType (dsc/dsc2.h) are accepted, matching the loader.",
+          "description": "How an index tensor's elements are interpreted: 'index' = element indices, 'address' = precomputed addresses. Set only when indirectAllocType_ is 'index_tensor'.",
           "enum": ["index", "address"]
         },
         "coordinates_": {
@@ -639,7 +630,7 @@
         },
         "padding": {
           "type": "string",
-          "description": "Padding type, from the PadType enum (string mapping in EnumsConversion::padTypeToString).",
+          "description": "Padding type for this dimension.",
           "enum": ["nopad", "lowered_padded", "padded_nozeropad",
                    "padded_wzeropad", "padded_fullspan",
                    "padded_fullspan_wunneeded"]
@@ -659,7 +650,7 @@
         "isPresent":    {"type": "integer", "enum": [0, 1], "description": "1 = tensor resides in this memory, 0 = absent"},
         "isPadded":     {"type": "integer", "enum": [0, 1], "description": "1 = allocation includes padding. See DimPaddingSizes for padding details."},
         "isZeroPadded": {"type": "integer", "enum": [0, 1], "description": "1 = padded region is zero-filled. Only meaningful when isPadded is 1."},
-        "dsOffset":     {"type": "integer", "description": "Byte offset of this tensor within its allocation. Emitted alongside allocateNode_ for every non-depthwise op; part of the general memOrg contract."},
+        "dsOffset":     {"type": "integer", "description": "Byte offset of this tensor within its allocation. Set alongside allocateNode_."},
         "allocateNode_": {"type": "string", "description": "Name of the ScheduleTreeNode that allocates this tensor in this memory. Must match that node's name_ field."}
       },
       "additionalProperties": false
@@ -704,7 +695,7 @@
         },
         "dataFormat_": {
           "type": "string",
-          "description": "Data format. Values are the DataFormats enum names accepted by FromString<DataFormats>() in util/sendefs/sendefs.h; INVALID is excluded because it is that converter's error sentinel, not an input format.",
+          "description": "Numeric format of each tensor element.",
           "enum": ["SEN169_FP16", "IEEE_FP32", "IEEE_FP16", "BFLOAT16", "BOOL",
                    "SEN143_FP8", "SEN152_FP8", "SEN153_FP9", "SEN18F_FP24",
                    "SEN080_FP8", "SEN053_FP8", "SEN121_FP4",
@@ -730,7 +721,7 @@
         },
         "opFuncName": {
           "type": "string",
-          "description": "Operation function name as generated by torch-spyre. See computeoperation.md#supported-operations for the full list."
+          "description": "Operation function name as generated by torch-spyre. See https://torch-spyre.readthedocs.io/ for the full list."
         },
         "attributes_": {
           "type": "object",
@@ -749,7 +740,7 @@
         },
         "location": {
           "type": "string",
-          "description": "Name of the loop the op executes in, from the LoopNames enum (string mapping in DesignSpaceConfig::loopNameToString). The loader accepts all 32 loop names, but only 'Inner' (the innermost loop) is supported in this curated set -- it is the only value the torch-spyre frontend emits.",
+          "description": "Name of the loop the operation executes in. 'Inner' (the innermost loop) is the only supported value.",
           "enum": ["Inner"]
         },
         "inputLabeledDs": {
@@ -777,7 +768,7 @@
     },
     "DimPaddingSizes": {
       "type": "object",
-      "description": "Padding sizes for a single dimension. Source: struct DimPaddingSizes in dsc/dims.h; serialized by DataStructDims::exportJson() in dsc/dims.cpp.",
+      "description": "Padding sizes for a single dimension.",
       "properties": {
         "padFront_": {"type": "integer", "description": "Front padding elements. Default 0."},
         "padBack_": {"type": "integer", "description": "Back padding elements. Default 0."},
@@ -793,12 +784,12 @@
         },
         "stride_": {"type": "integer", "minimum": 1, "description": "Stride. Default 1."},
         "dilation_": {"type": "integer", "minimum": 1, "description": "Dilation. Default 1."},
-        "windowDim_": {"type": "string", "description": "Associated window primary dim name (e.g. 'kij_'). Uses primaryDimToString mapping."}
+        "windowDim_": {"type": "string", "description": "Associated window primary dim name (e.g. 'ki_', 'kj_'). Uses primaryDimToString mapping."}
       }
     },
     "SymbolicDimInfo": {
       "type": "object",
-      "description": "Symbolic dimension info for runtime-variable dimensions. Source: struct SymbolicDimInfo in dsc/dims.h.",
+      "description": "Bounds for a dimension whose size is not known until run time.",
       "required": ["maxSize_", "granularity_"],
       "properties": {
         "maxSize_": {"type": "integer", "minimum": 1, "description": "Maximum value of this symbolic dimension."},
@@ -817,7 +808,7 @@
         },
         "dataFormat_": {
           "type": "string",
-          "description": "Numeric format of the constant elements. Must match the data format of the tensors the constant is applied to. Same value set as LabeledDataStructure.dataFormat_ (see util/sendefs/sendefs.h FromString<DataFormats>()).",
+          "description": "Numeric format of the constant elements. Must match the data format of the tensors the constant is applied to. Same value set as LabeledDataStructure.dataFormat_.",
           "enum": ["SEN169_FP16", "IEEE_FP32", "IEEE_FP16", "BFLOAT16", "BOOL",
                    "SEN143_FP8", "SEN152_FP8", "SEN153_FP9", "SEN18F_FP24",
                    "SEN080_FP8", "SEN053_FP8", "SEN121_FP4",

@@ -46,7 +46,7 @@ Root Object (Dynamic operation name key, e.g., "exp", "matmul")
      ├─── coreIdToDsc_: Object<coreId → dscIndex> (required)
      ├─── numWkSlicesPerDim_: Object<dimension → sliceCount>
      ├─── coreIdToWkSlice_: Object<coreId → Object<dimension → sliceIndex>>
-     ├─── coreIdToDscSchedule: Object<coreId → Array<[4 integers]>> (required)
+     ├─── coreIdToDscSchedule: Object<coreId → Array<[datadsc_idx, dldsc_idx, before_sync, after_sync]>> (required)
      │
      └─── dscs_: Array<WrappedDesignSpaceConfig> (required)
           │
@@ -90,9 +90,9 @@ Root Object (Dynamic operation name key, e.g., "exp", "matmul")
                     │         ├─── layoutDimOrder_: Array<string>
                     │         ├─── maxDimSizes_: Array<integer>
                     │         ├─── isStartAddrSymbolic_: boolean | 0 | 1
+                    │         ├─── nonUnifiedAllocInHBM_: boolean | 0 | 1
                     │         ├─── startAddressCoreCorelet_: FoldManager
                     │         ├─── backGapCore_: Object
-                    │         ├─── padding_: Object
                     │         ├─── indirectAllocType_: "no_indirection" | "value_tensor" | "index_tensor"
                     │         ├─── relatedIndirectAccessAlloc_: string
                     │         ├─── indexTensorType_: "index" | "address"
@@ -176,6 +176,7 @@ Root Object (Dynamic operation name key, e.g., "exp", "matmul")
 15. **indirectAllocType_**: Constrained to `"no_indirection"`, `"value_tensor"`, or `"index_tensor"`; when `"index_tensor"`, `indexTensorType_` must also be present.
 16. **ComputeOperation.location**: Only `"Inner"` is emitted by the torch-spyre frontend (the loader accepts all 32 loop names).
 17. **fidelity_**: Valid values are `"regular"` and `"fast"` (`"high"` and `"low"` are no longer valid).
+18. **coreIdToDscSchedule Step Tuple**: 4-integer array `[datadsc_idx, dldsc_idx, before_sync, after_sync]`, where `datadsc_idx` indexes `datadscs_` (`-1` by default), `dldsc_idx` indexes `dscs_` (`0` for single-DSC bundles), and `before_sync`/`after_sync` are `0`/`1` barrier flags. Common default: `[-1, 0, 0, 0]`.
 
 ---
 

@@ -107,7 +107,7 @@ for ch in ("N_", "DIM2S", "DSP", "PDS", "ST", "LDS", "CI", "COP"):
     edge(g, "CONFIG", ch)
 
 # ── ScheduleTreeNode ──────────────────────────────────────────────────────────
-node(g, "STN",   "ScheduleTreeNode\n─ nodeType_: \"allocate\"\n─ name_: string\n─ component_: hbm|lx\n─ layoutDimOrder_[]\n─ maxDimSizes_[]\n─ isStartAddrSymbolic_\n─ indirectAllocType_",
+node(g, "STN",   "ScheduleTreeNode\n─ nodeType_: \"allocate\"\n─ name_: string\n─ component_: hbm|lx\n─ layoutDimOrder_[]\n─ maxDimSizes_[]\n─ isStartAddrSymbolic_\n─ nonUnifiedAllocInHBM_\n─ indirectAllocType_",
      C_SCHED, C_WHITE)
 node(g, "COORD", "coordinates_\nCoordinateContainer",                            C_SCHED, C_WHITE)
 node(g, "CINFO_MAP", "coordInfo\nObject<dim → CoordinateInfo>",                  C_SCHED, C_WHITE)

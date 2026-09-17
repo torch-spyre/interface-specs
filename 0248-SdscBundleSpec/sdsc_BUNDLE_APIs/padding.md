@@ -4,7 +4,7 @@ For window/padded operations, such as convolution, padding information should be
 
 When a dimension is padded due to window/padded operations like convolution, details of padding need to be specified via the following fields. `paddingSizes_` is only emitted when `sdsc_spec.padding_sizes` is non-empty — currently **avgpool2d** and **depthwise conv2d**. All other operations (pointwise, matmul, reductions, transpose, etc.) leave it absent entirely.
 
-## (i) paddingSizes_
+## paddingSizes_
 
 `paddingSizes_` is a dict keyed by spatial dimension label (e.g. `"i"`, `"j"`). It appears in three locations in the SDSC JSON:
 
@@ -80,22 +80,6 @@ Two separate variants are emitted: a top-level `padding_sizes` (full output size
   }
 }
 ```
-
-## (ii) padding field in CoordinateInfo
-
-The `padding` field inside `coordinates_.coordInfo[<dim>]` (a `CoordinateInfo` object within a `scheduleTree_` node) can take on the following values:
-
-```
-nopad
-lowered_padded
-padded_nozeropad
-padded_wzeropad
-padded_fullspan
-padded_fullspan_wunneeded
-```
-
-**`padded_nozeropad`** — to be used with conv2d when padding is non-zero.
-**`padded_fullspan_wunneeded`** — to be used with conv2d when padding is zero.
 
 ---
 

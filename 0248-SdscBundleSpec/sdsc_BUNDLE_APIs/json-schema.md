@@ -26,7 +26,7 @@ pages and in the [Validation section of SDSC JSON API](SDSC-json-api.md#validati
 | 1.1.0 | 2026-05-XX | Added symbolic-dimension support: `SymbolicDimInfo`, `DimPaddingSizes`, `dimToSymbolMapping_`, `isStartAddrSymbolic_`, and related `SuperDsc` symbol fields |
 | 1.1.1 | 2026-07-07 | Allow `isStartAddrSymbolic_` to accept integer `0`/`1` in addition to boolean |
 | 1.1.2 | 2026-07-07 | Allow `DataStructDims` dimension fields to accept empty object `{}` |
-| 1.2.0 | 2026-07-08 | Sync with deeptools-schema.json v1.3.0: explicit dim fields on `DataStructDims`, corrected `DimPaddingSizes` field names, corrected `SymbolicDimInfo.maxSize_`, added `name_` to per-stage `dataStageParam_` object |
+| 1.2.0 | 2026-07-08 | Sync with deeptools-schema.json v1.3.0: explicit dim fields on `DataStructDims`, corrected `DimPaddingSizes` field names, corrected `SymbolicDimInfo.maxSize_`, added `name_` to per-stage `dataStageParam_` object, added `nonUnifiedAllocInHBM_` to `ScheduleTreeNode` |
 
 ---
 

@@ -70,7 +70,7 @@ These are always serialized (value `-1` when unset):
 
 | Field | Type | Description |
 |---|---|---|
-| `paddingSizes_` | map&lt;string, DimPaddingSizes&gt; | Per-dimension padding information. Keys are dim names (e.g. `"r_"`, `"c_"`). See [Padding](padding.md). |
+| `paddingSizes_` | map&lt;string, DimPaddingSizes&gt; | Per-dimension padding information. Keys are dim names (e.g. `"i"`, `"j"`). See [Padding](padding.md). |
 | `symbolicDimInfo_` | map&lt;string, SymbolicDimInfo&gt; | Per-dimension symbolic size constraints. Keys are dimension names (e.g. `"mb_"`). See [SymbolicDimInfo](#symbolicdiminfo) below. |
 | `maxSymbolicVolume_` | map&lt;string, integer&gt; | Maximum combined symbolic volume for a set of dims. Keys are dim-set arrays encoded as strings (e.g. `'["in_","mb_"]'`). |
 | `coreletSplit_` | map&lt;string, array&lt;int&gt;&gt; | Explicit per-dimension work split across corelets. One integer per corelet. |
@@ -137,24 +137,6 @@ func.func @op(%mb_arg: !sdscbundle.input_arg<index, granularity=1, max_value=32>
   ...
 }
 ```
-
-### Deprecated dimension fields
-
-Serialized unless `skipDeprecatedFields=true`. Prefer the primary dims above.
-
-| Field | Description |
-|---|---|
-| `r_` | Input image rows with zero padding. |
-| `c_` | Input image cols with zero padding. |
-| `ij_` | Output image rows/cols combined. |
-| `rc_` | Input image rows/cols with zero padding combined. |
-| `kij_` | Kernel rows/cols combined. |
-| `sij_` | Stride rows/cols combined. |
-| `zij_` | Zero-pad rows/cols combined. |
-| `si_` | Stride along rows. |
-| `sj_` | Stride along cols. |
-| `zi_` | Zero-pad rows. |
-| `zj_` | Zero-pad cols. |
 
 ## Example
 

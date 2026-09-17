@@ -43,7 +43,7 @@ The value tensor uses `dsType_: "KERNEL"` in `labeledDs_`; the index tensor uses
       "0": 0
     },
     "coreIdToDscSchedule": {
-      "0": [[0, 0, 0, 0]]
+      "0": [[-1, 0, 0, 0]]
     },
     "dscs_": [
       {

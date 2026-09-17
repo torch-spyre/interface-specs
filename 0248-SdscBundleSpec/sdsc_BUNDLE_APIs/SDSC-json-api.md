@@ -78,8 +78,8 @@ Create the root object with a single key — the operation name string
 [`SuperDsc`](superdsc-object.md) object. Fill the fold properties first, as
 every [`FoldManager`](foldmanager.md) used later inherits from these:
 
-- Set `coreFoldProp_.factor_` to the maximum core ID in use (e.g. `32` for a
-  full-chip bundle). Set `label_` to `"core"`.
+- Set `coreFoldProp_.factor_` to a value between 1 and the maximum number of cores
+  in use (e.g. `32` for a full-chip bundle, or `2` for a 2-core bundle). Set `label_` to `"core"`.
 - Set `coreletFoldProp_.factor_` to `2`. Set `label_` to `"corelet"`.
 - Set `numCoresUsed_` to the total number of cores.
 - (Optional) Set `sdscFoldProps_` and `sdscFolds_` only when bundle-level fold
@@ -96,9 +96,13 @@ slices and DSC indices to cores:
   slice index that core handles (e.g. `{"0": {"mb": 0}, "1": {"mb": 1}}`).
 - Set `coreIdToDsc_`: map each core ID (as a string integer) to its zero-based
   index into `dscs_`. All cores typically map to `0` when work is balanced.
-- Set `coreIdToDscSchedule`: for each core, one schedule tuple `[0, 0, 0, 0]`
-  covers the common case (single DSC, no barriers). The four integers are
-  `[datadsc_idx, dldsc_idx, before_sync, after_sync]`.
+- Set `coreIdToDscSchedule`: for each core, one schedule tuple `[-1, 0, 0, 0]`
+  covers the common case (single DSC, no data-op DSC, no barriers). The four integers are
+  `[datadsc_idx, dldsc_idx, before_sync, after_sync]`:
+  - `datadsc_idx` = `-1` (default; index into `datadscs_`, or `-1` when no data DSC is attached)
+  - `dldsc_idx` = `0` (zero-based index into `dscs_` for the executed `DesignSpaceConfig`)
+  - `before_sync` = `0` (no barrier before step)
+  - `after_sync` = `0` (no barrier after step)
 - (Optional) Populate `inputSymbolsAndTags_`, `symbolDefinitions_`, and
   `dimToSymbolMappingOpcodeCorrection_` when symbolic dimensions are used.
 

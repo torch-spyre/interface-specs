@@ -71,7 +71,7 @@ Six fields are required. No additional properties are allowed.
 | `coreIdToDsc_` | map&lt;string, integer&gt; | Yes | Keys: `^[0-9]+$`; values >= 0 | Maps each core ID (string integer) to a zero-based index into `dscs_`. Multiple cores with the same index share one `DesignSpaceConfig`. |
 | `numWkSlicesPerDim_` | map&lt;string, integer&gt; | No | Keys: dim names; values >= 1 | Total number of work slices per dimension across all cores. |
 | `coreIdToWkSlice_` | map&lt;string, map&lt;string, integer&gt;&gt; | No | Outer keys: core IDs; inner keys: dim names; values >= 0 | Maps each core ID to a map of dimension name → work slice index assigned to that core. |
-| `coreIdToDscSchedule` | map&lt;string, array&lt;array&lt;int&gt;&gt;&gt; | Yes | Keys: `^[0-9]+$`; inner arrays: exactly 4 integers | Per-core execution schedule. Each inner array is a step tuple `[datadsc_idx, dldsc_idx, before_sync, after_sync]`: index into `dscs_` for the data/compute DSC (`-1` = no data DSC); index into `dscs_` for the data-load DSC (`-1` = none); barrier before step (`0` = none, `1` = sync); barrier after step (`0` = none, `1` = sync). |
+| `coreIdToDscSchedule` | map&lt;string, array&lt;array&lt;int&gt;&gt;&gt; | Yes | Keys: `^[0-9]+$`; inner arrays: exactly 4 integers | Per-core execution schedule. Each inner array is a 4-integer step tuple `[datadsc_idx, dldsc_idx, before_sync, after_sync]`. See [Schedule step tuple](#schedule-step-tuple) below. |
 | `dscs_` | array of object | Yes | >= 1 item | Array of Design Space Configurations. Each entry is a single-key object `{"<op_name>": <DesignSpaceConfig>}` — see [`DesignSpaceConfig`](designspaceconfig.md). |
 
 **Note on field naming:** `coreIdToDscSchedule` lacks the trailing underscore used by most other
@@ -121,9 +121,20 @@ single schedule step per core.
 ```
 
 Both cores execute DSC index `0` (`"gelu"`). Core `0` processes work slice `mb=0` and core `1`
-processes work slice `mb=1`. The schedule tuple `[-1, 0, 0, 0]` means: `datadsc_idx=-1` (no
-data DSC), `dldsc_idx=0` (data-load DSC index 0 in `dscs_`), `before_sync=0` (no barrier
-before), `after_sync=0` (no barrier after).
+processes work slice `mb=1`.
+
+### Schedule step tuple
+
+Each schedule entry in `coreIdToDscSchedule` is an array of 4-element tuples `[datadsc_idx, dldsc_idx, before_sync, after_sync]`:
+
+| Position | Field | Type | Description | Default / Typical |
+|---|---|---|---|---|
+| 0 | `datadsc_idx` | integer | Index into `datadscs_` for data-operation DSCs (transpose, slice). `-1` indicates no data DSC is attached. | `-1` |
+| 1 | `dldsc_idx` | integer | Zero-based index into `dscs_` identifying the compute/data-load `DesignSpaceConfig` executed at this step. | `0` (for single-DSC bundles) |
+| 2 | `before_sync` | integer | Barrier flag before executing this step. `0` = no synchronization barrier, `1` = barrier synchronization. | `0` |
+| 3 | `after_sync` | integer | Barrier flag after executing this step. `0` = no synchronization barrier, `1` = barrier synchronization. | `0` |
+
+In practice, the standard step tuple for single-operation bundles is `[-1, 0, 0, 0]`, indicating no data-op DSC (`datadsc_idx = -1`), execution of DSC index 0 (`dldsc_idx = 0`), and no synchronization barriers before or after (`before_sync = 0`, `after_sync = 0`).
 
 ---
 
