@@ -222,7 +222,7 @@
       "properties": {
         "dim_prop_func": {
           "type": "array",
-          "description": "One fold function per dimension (same length as dim_prop_attr). Each element is a single-key object: Const (same value for all indices), Map (lookup in data_), Affine (alpha*index+beta), or WkSplit (work-slice index from coreIdToWkSlice_).",
+          "description": "One fold function per dimension (same length as dim_prop_attr). Each element is a single-key object: Const (same value for all indices), Map (lookup in data_), or Affine (alpha*index+beta).",
           "items": {
             "type": "object",
             "properties": {
@@ -234,8 +234,7 @@
                   "alpha_": {"type": "integer", "description": "Affine scale factor"},
                   "beta_": {"type": "integer", "description": "Affine offset"}
                 }
-              },
-              "WkSplit": {"type": "object"}
+              }
             }
           }
         },
@@ -572,6 +571,10 @@
             }
           }
         },
+        "padding_": {
+          "type": "object",
+          "description": "Padding parameters for this allocation. Set when the tensor requires memory padding beyond its logical size."
+        },
         "indirectAllocType_": {
           "type": "string",
           "description": "Indirect allocation type tag. Present when this node participates in an indirect-access allocation pattern.",
@@ -650,7 +653,6 @@
         "isPresent":    {"type": "integer", "enum": [0, 1], "description": "1 = tensor resides in this memory, 0 = absent"},
         "isPadded":     {"type": "integer", "enum": [0, 1], "description": "1 = allocation includes padding. See DimPaddingSizes for padding details."},
         "isZeroPadded": {"type": "integer", "enum": [0, 1], "description": "1 = padded region is zero-filled. Only meaningful when isPadded is 1."},
-        "dsOffset":     {"type": "integer", "description": "Byte offset of this tensor within its allocation. Set alongside allocateNode_."},
         "allocateNode_": {"type": "string", "description": "Name of the ScheduleTreeNode that allocates this tensor in this memory. Must match that node's name_ field."}
       },
       "additionalProperties": false
@@ -738,11 +740,6 @@
             }
           }
         },
-        "location": {
-          "type": "string",
-          "description": "Name of the loop the operation executes in. 'Inner' (the innermost loop) is the only supported value.",
-          "enum": ["Inner"]
-        },
         "inputLabeledDs": {
           "type": "array",
           "description": "Input tensor references from labeledDs_ using the '<dsName_>-idx<N>' naming convention.",
@@ -757,34 +754,29 @@
           "type": "array",
           "description": "Index tensors for indirect access operations (gather/scatter). See ScheduleTreeNode.indirectAllocType_.",
           "items": {"type": "string"}
-        },
-        "interimLabeledDs": {
-          "type": "array",
-          "description": "Intermediate tensors used within the operation, not exposed as inputs or outputs.",
-          "items": {"type": "string"}
         }
       },
       "additionalProperties": false
     },
     "DimPaddingSizes": {
       "type": "object",
-      "description": "Padding sizes for a single dimension.",
+      "description": "Padding sizes for a single spatial dimension. See padding.md for full semantics and worked examples.",
       "properties": {
-        "padFront_": {"type": "integer", "description": "Front padding elements. Default 0."},
-        "padBack_": {"type": "integer", "description": "Back padding elements. Default 0."},
-        "unneededPad_": {"type": "integer", "description": "Total unneeded padding elements."},
-        "unneededPadFront_": {"type": "integer", "description": "Unneeded elements originating from padFront_."},
-        "unneededPadBack_": {"type": "integer", "description": "Unneeded elements originating from padBack_."},
+        "padFront_": {"type": "integer", "description": "Front padding elements (net, after unneeded reduction). Default 0. Set to -1 in dataStageParam_ entries only when the dimension is chunked across cores."},
+        "padBack_": {"type": "integer", "description": "Back padding elements (net, after unneeded reduction). Default 0. Set to -1 in dataStageParam_ entries only when the dimension is chunked across cores."},
+        "unneededPad_": {"type": "integer", "description": "Total unused elements at the tail of the allocated span (allocated_span - consumed_span). Counts both padding and real data; may exceed unneededPadFront_ + unneededPadBack_. See padding.md for the absorption algorithm."},
+        "unneededPadFront_": {"type": "integer", "description": "Portion of the unneeded slack absorbed from front padding. Rarely non-zero in practice."},
+        "unneededPadBack_": {"type": "integer", "description": "Portion of the unneeded slack absorbed from back padding."},
         "totalSize_": {
-          "description": "Computed total padded size. The string 'N/A' when windowDim_ is unset and padFront_ < 0.",
+          "description": "Total input size inclusive of padding: (out - 1) * stride + kernel + unneededPad_. 'N/A' when windowDim_ is unset and padFront_ < 0. Full or per-core input span depending on location.",
           "oneOf": [
             {"type": "integer"},
             {"type": "string", "enum": ["N/A"]}
           ]
         },
-        "stride_": {"type": "integer", "minimum": 1, "description": "Stride. Default 1."},
-        "dilation_": {"type": "integer", "minimum": 1, "description": "Dilation. Default 1."},
-        "windowDim_": {"type": "string", "description": "Associated window primary dim name (e.g. 'ki_', 'kj_'). Uses primaryDimToString mapping."}
+        "stride_": {"type": "integer", "minimum": 1, "description": "Stride applied with the operation. Default 1."},
+        "dilation_": {"type": "integer", "minimum": 1, "description": "Dilation applied with the operation. Default 1."},
+        "windowDim_": {"type": "string", "description": "Associated window primary dim name (e.g. 'ki', 'kj'). Uses primaryDimToString mapping."}
       }
     },
     "SymbolicDimInfo": {

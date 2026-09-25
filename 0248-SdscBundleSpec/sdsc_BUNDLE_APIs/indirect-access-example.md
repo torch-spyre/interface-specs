@@ -21,7 +21,8 @@ Compared with a direct-access allocation, three extra things must be done:
 |---|---|---|
 | Mark the value tensor's allocate node | `ScheduleTreeNode.indirectAllocType_` | `"value_tensor"` |
 | Mark the index tensor's allocate node | `ScheduleTreeNode.indirectAllocType_` | `"index_tensor"` |
-| Cross-link the two nodes | `ScheduleTreeNode.relatedIndirectAccessAlloc_` | name of the **other** node |
+| Cross-link value node → index node | `ScheduleTreeNode.relatedIndirectAccessAlloc_` (on value node) | `name_` of the index allocate node |
+| Cross-link index node → value node | `ScheduleTreeNode.relatedIndirectAccessAlloc_` (on index node) | `name_` of the value allocate node |
 | Declare how to interpret the index | `ScheduleTreeNode.indexTensorType_` (index node only) | `"index"` or `"address"` |
 | Set the page size on the value tensor | `ScheduleTreeNode.maxDimSizes_` | page size in elements |
 | Reference the index tensor in the compute op | `ComputeOperation.indirectAccessIndexLabeledDs` | composite name string |
@@ -332,7 +333,6 @@ The value tensor uses `dsType_: "KERNEL"` in `labeledDs_`; the index tensor uses
                 "dataFormat_": "SEN169_FP16",
                 "fidelity_":   "regular"
               },
-              "location": "Inner",
               "inputLabeledDs":               ["topk-Input-idx0"],
               "outputLabeledDs":              ["topk-Output-idx1"],
               "indirectAccessIndexLabeledDs": ["topk-Indices-idx3"]

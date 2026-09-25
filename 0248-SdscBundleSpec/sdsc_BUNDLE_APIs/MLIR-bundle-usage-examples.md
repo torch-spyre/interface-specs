@@ -77,7 +77,11 @@ module {
   "component_": "hbm",
   "isStartAddrSymbolic_": true,
   "startAddressCoreCorelet_": {
-    "dim_prop_func": [{"Const": {}}],
+    "dim_prop_func": [{"Const": {}}, {"Const": {}}],
+    "dim_prop_attr": [
+      {"factor_": 1, "label_": "core"},
+      {"factor_": 1, "label_": "corelet"}
+    ],
     "data_": {
       "[0, 0]": "-1"
     }
@@ -127,6 +131,10 @@ module {
   "isStartAddrSymbolic_": true,
   "startAddressCoreCorelet_": {
     "dim_prop_func": [{"Map": {}}, {"Const": {}}],
+    "dim_prop_attr": [
+      {"factor_": 2, "label_": "core"},
+      {"factor_": 1, "label_": "corelet"}
+    ],
     "data_": {
       "[0, 0]": "-1",
       "[1, 0]": "-2"
@@ -224,7 +232,11 @@ marks `mb_` as symbolic; `symbolicDimInfo_` constrains the valid runtime range:
         "component_": "hbm",
         "isStartAddrSymbolic_": true,
         "startAddressCoreCorelet_": {
-          "dim_prop_func": [{"Const": {}}],
+          "dim_prop_func": [{"Const": {}}, {"Const": {}}],
+          "dim_prop_attr": [
+            {"factor_": 1, "label_": "core"},
+            {"factor_": 1, "label_": "corelet"}
+          ],
           "data_": { "[0, 0]": "-2" }
         }
       },
@@ -235,7 +247,11 @@ marks `mb_` as symbolic; `symbolicDimInfo_` constrains the valid runtime range:
         "component_": "hbm",
         "isStartAddrSymbolic_": true,
         "startAddressCoreCorelet_": {
-          "dim_prop_func": [{"Const": {}}],
+          "dim_prop_func": [{"Const": {}}, {"Const": {}}],
+          "dim_prop_attr": [
+            {"factor_": 1, "label_": "core"},
+            {"factor_": 1, "label_": "corelet"}
+          ],
           "data_": { "[0, 0]": "-3" }
         }
       }
@@ -310,6 +326,10 @@ module {
   "isStartAddrSymbolic_": true,
   "startAddressCoreCorelet_": {
     "dim_prop_func": [{"Map": {}}, {"Const": {}}],
+    "dim_prop_attr": [
+      {"factor_": 2, "label_": "core"},
+      {"factor_": 1, "label_": "corelet"}
+    ],
     "data_": {
       "[0, 0]": "-2",
       "[1, 0]": "-3"
@@ -327,6 +347,10 @@ module {
   "isStartAddrSymbolic_": true,
   "startAddressCoreCorelet_": {
     "dim_prop_func": [{"Map": {}}, {"Const": {}}],
+    "dim_prop_attr": [
+      {"factor_": 2, "label_": "core"},
+      {"factor_": 1, "label_": "corelet"}
+    ],
     "data_": {
       "[0, 0]": "-4",
       "[1, 0]": "-5"

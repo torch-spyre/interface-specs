@@ -3,11 +3,7 @@
 **Spec Version:** 1.0.0
 **Status:** Active
 
-> Version numbers follow [Semantic Versioning](https://semver.org/):
-> **MAJOR** — breaking change to a field, type, or required constraint;
-> **MINOR** — new field, new object, or new operation added;
-> **PATCH** — correction, clarification, or editorial fix.
-> Bump the version in this header when a PR is merged.
+> The API document will follow the deeptoolsRelease versioning
 
 ---
 
@@ -47,7 +43,7 @@ Documents are organized in the recommended reading order, grouped by learning st
 |---|---------|------|
 | 3.1 | SDSC JSON API | [SDSC-json-api.md](SDSC-json-api.md) |
 | 3.2 | Object Hierarchy | [JSON-object-Hierarchy.md](JSON-object-Hierarchy.md) |
-| 3.3 | JSON Schema (normative) | [json-schema.md](json-schema.md) |
+| 3.3 | JSON Schema (normative) | [sdscbundle-schema.json](sdscbundle-schema.json) |
 
 ---
 
@@ -61,7 +57,8 @@ Documents are organized in the recommended reading order, grouped by learning st
 | 4.2 | FoldProperty | [foldproperty.md](foldproperty.md) |
 | 4.3 | FoldManager | [foldmanager.md](foldmanager.md) |
 | 4.4 | Padding | [padding.md](padding.md) |
-| 4.5 | Stick Layout Constraints | [stick-layout-constraints.md](stick-layout-constraints.md) |
+| 4.5 | Stick-Alignment Padding | [stick-padding.md](stick-padding.md) |
+| 4.6 | Stick Layout Constraints | [stick-layout-constraints.md](stick-layout-constraints.md) |
 
 ---
 
@@ -96,7 +93,7 @@ Documents are organized in the recommended reading order, grouped by learning st
 
 ### Stage 7 — Worked Examples
 
-> End-to-end examples that tie all objects together; read after completing Stage 4.
+> End-to-end examples that tie all objects together; read after completing Stage 6.
 
 | # | Section | File |
 |---|---------|------|
@@ -105,12 +102,12 @@ Documents are organized in the recommended reading order, grouped by learning st
 
 ---
 
-### Stage 8 — Production Readiness
+### Stage 8 — References
 
-> Reference glossary.
+> External specifications, MLIR dialect documentation, and the normative JSON schema.
 
 | # | Section | File |
 |---|---------|------|
-| 8.1 | Reference Documents | [reference.md](reference.md) |
+| 8.1 | References | [reference.md](reference.md) |
 
 ---

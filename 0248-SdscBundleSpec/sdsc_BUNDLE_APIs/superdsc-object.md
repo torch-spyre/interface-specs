@@ -56,14 +56,14 @@ Each entry in `dscs_` is a single-key object — the key is the operation name
 
 Six fields are required. No additional properties are allowed.
 
-| Field | Type | Required | Constraints | Description |
+| Field | Type | Required † | Constraints | Description |
 |---|---|---|---|---|
 | `sdscFoldProps_` | array of [FoldProperty](foldproperty.md) | No | — | SDSC-level fold properties when the bundle spans multiple fold dimensions above the core level. |
 | `sdscFolds_` | [FoldManager](foldmanager.md) | No | — | Fold manager encoding addresses or mappings at the bundle level, above the per-core level. |
 | `coreFoldProp_` | [FoldProperty](foldproperty.md) | Yes | — | Fold factor and label for the core level of the memory hierarchy (e.g. `factor_: 2, label_: "core"`). |
 | `coreletFoldProp_` | [FoldProperty](foldproperty.md) | Yes | — | Fold factor and label for the corelet level of the memory hierarchy (e.g. `factor_: 2, label_: "corelet"`). |
 | `numCoresUsed_` | integer | Yes | >= 1 | Total number of Spyre cores used across all DSCs in this bundle. |
-| `debug_handle_` | DebugHandle or null | No | — | Source-to-kernel provenance for this SuperDsc, emitted by the frontend. Mirrors the MLIR location of the originating torch op: includes the source file/line (`source`), ATen op name (`aten_op`), lowering chain (`ir_chain`), fusion origins (`fused_from`), and rewrite history (`transform_history`). `null` is a normal value (not missing data) when provenance is unavailable. Not read by the deeptools loader — exists for tooling that maps kernels back to source. |
+| `debug_handle_` | DebugHandle or null | No† | — | Source-to-kernel provenance for this SuperDsc. Consumed by tooling that maps a compiled kernel back to its source; it does not affect compilation. Includes the source file/line (`source`), ATen op name (`aten_op`), lowering chain (`ir_chain`), fusion origins (`fused_from`), and rewrite history (`transform_history`). `null` is a normal value (not missing data) when provenance is unavailable. |
 | `dimToSymbolMappingOpcodeCorrection_` | map&lt;string, string&gt; | No | Keys: dim names | Symbol mapping corrections applied during opcode generation. Keys are dimension names; values are corrected symbol names. |
 | `inputSymbolsAndTags_` | map&lt;string, string&gt; | No | Keys: symbol names | Input symbols and their associated tags for symbolic dimension resolution. |
 | `symbolDefinitions_` | object | No | — | Variable definitions for symbolic dimensions used across the bundle. |
@@ -77,6 +77,8 @@ Six fields are required. No additional properties are allowed.
 **Note on field naming:** `coreIdToDscSchedule` lacks the trailing underscore used by most other
 fields. The serialized key in the JSON bundle is `coreIdToDscSchedule` (no underscore) — this
 inconsistency is a known anomaly. Do not add a trailing underscore when writing bundle JSON.
+
+**† `debug_handle_` presence convention:** The field is optional per the schema — the key may be omitted entirely when provenance is unavailable. However, the torch-spyre frontend always emits the key, setting it to `null` when no provenance information exists rather than omitting it. Consumers must therefore tolerate both a missing key and an explicit `null` value.
 
 ## Example
 
@@ -138,5 +140,5 @@ In practice, the standard step tuple for single-operation bundles is `[-1, 0, 0,
 
 ---
 
-| [← Previous: JSON Schema](json-schema.md) | [↑ Table of Contents](README.md) | [Next: FoldProperty →](foldproperty.md) |
+| [← Previous: Object Hierarchy](JSON-object-Hierarchy.md) | [↑ Table of Contents](README.md) | [Next: FoldProperty →](foldproperty.md) |
 |:--|:--:|--:|

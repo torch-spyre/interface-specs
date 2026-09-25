@@ -18,7 +18,7 @@ knows which loop index to use.
 
 ## Context
 
-`FoldProperty` appears in three places:
+`FoldProperty` appears in four places:
 
 | Parent field | Role |
 |---|---|
@@ -56,6 +56,8 @@ The `dim_prop_attr` labels in coordinate folds (such as `coordinates_.coordInfo.
 | `row_fold` | Row level | Split across rows within a corelet |
 | `elem_arr_0` | Leaf element slice | Number of contiguous elements per innermost slice (or per stick) |
 | `elem_arr_1` | Stick slice | Number of sticks per slice (used for stick dimensions where `elemArr` is 2) |
+
+**Note:** The standard hierarchy labels above (`core_fold`, `corelet_fold`, `row_fold`, `elem_arr_0`, `elem_arr_1`) apply when a dimension is partitioned across the spatial hierarchy. When a dimension is **collapsed** (not split across the hierarchy), a bare dimension-name label such as `"mb"` or `"kb"` may appear instead. In that case `spatial` and `elemArr` in the parent `CoordinateInfo` are both `0`, and the `FoldManager` typically uses a single `Const` function.
 
 ## Example
 

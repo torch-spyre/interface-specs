@@ -2,13 +2,7 @@
 
 ## Introduction
 
-Each `sdsc_*.json` file in a SuperDSC-Bundle describes a single torch operation to be executed on the Spyre backend (DeepTools). One JSON file encodes everything the hardware needs to execute that operation deterministically across 1 or multiple cores: how the iteration space is divided, how tensors are laid out in memory, where data lives (HBM vs. LX scratchpad), and what compute to perform.
-
-> **Schema:** All `sdsc_*.json` files must conform to the [SDSC Bundle JSON Schema](json-schema.md).
-> The schema is the normative reference for structural correctness — it enforces required fields,
-> enum values, and type constraints for every object in the hierarchy.
-> The step-by-step guide below, together with the individual object pages, covers the semantic
-> constraints that go beyond what JSON Schema can express.
+Each `sdsc_*.json` file in a SuperDSC-Bundle describes a single torch operation to be executed on the Spyre card. One JSON file encodes everything the hardware needs to execute that operation deterministically across 1 or multiple cores: how the iteration space is divided, how tensors are laid out in memory, where data lives (HBM vs. LX scratchpad), and what compute to perform.
 
 A PyTorch model may translate into several SuperDSC-Bundles. Each bundle is composed of a `bundle.mlir` file (which orchestrates execution flow and symbol management — see [MLIR Bundle API](MLIR-bundle-API.md)) and one or more `sdsc_*.json` files. Each JSON file corresponds to one torch operation.
 
@@ -19,6 +13,17 @@ The different sections of an SDSC JSON file describe the following:
 - **Schedule tree** — per-tensor memory allocation, start addresses, and coordinate mappings
 - **Data staging** — per-core tile sizes for steady-state and epilogue passes
 - **Compute operations** — execution unit, operation name, and input/output tensor references
+
+All `sdsc_*.json` files in a SuperDSC-Bundle must conform to [`sdscbundle-schema.json`](sdscbundle-schema.json),
+the machine-readable contract written against [JSON Schema draft 2020-12](https://json-schema.org/draft/2020-12).
+
+The schema enforces:
+
+- Required fields and their types at every level of the object hierarchy
+- Enum values for `dsType_`, `component_`, `indirectAllocType_`, `indexTensorType_`,
+  `dataFormat_`, `fidelity_`, `nodeType_`, and all other constrained string fields
+- Pattern constraints on dynamic keys such as core IDs and operation-name root keys
+- Structural rules such as `additionalProperties: false` on all defined objects
 
 ## Key Components
 
@@ -36,7 +41,7 @@ An SDSC JSON file is structured as a single top-level key (the operation name) w
 | Blue | Bundle / DSC structure | `SuperDsc`, `WrappedDesignSpaceConfig`, `DesignSpaceConfig` |
 | Violet | Tensor objects | `LabeledDataStructure`, `MemoryOrganization`, `PrimaryDsInfo`, `ConstantInfo` |
 | Green | Scheduling & coordinate objects | `ScheduleTreeNode`, `CoordinateContainer`, `CoordinateInfo`, `DataStageParam` |
-| Amber | Compute objects | `ComputeOperation`, `attributes_` |
+| Amber | Compute objects | `ComputeOperation` (+ `attributes_` sub-object) |
 
 | Component | Role | Reference |
 |---|---|---|
@@ -130,7 +135,7 @@ In [`DesignSpaceConfig.dataStageParam_`](datastageparam.md):
 - Set `ss_` and `el_` to the per-core tile sizes. When work divides evenly
   `ss_` and `el_` are identical; `el_` carries the smaller final tile
   when it does not.
-- For window/padded operations (avgpool, depthwise conv2d): add `paddingSizes_`
+- For window/padded operations (avgpool2d, maxpool2d, conv2d, depthwise conv2d): add `paddingSizes_`
   to both `ss_` and `el_`. If a padded dimension is split across cores, set
   `padFront_` and `padBack_` to `-1` in the per-core datastage entry.
   See [Padding](padding.md) for the full field set.
@@ -231,35 +236,6 @@ In [`DesignSpaceConfig.computeOp_`](computeoperation.md):
   (e.g. `"gelu-Tensor0-idx0"`).
 - For indirect access operations: populate `indirectAccessIndexLabeledDs` with
   the index tensor references.
-
-## Validation
-
-SDSC JSON files are validated at two levels:
-
-### 1. Schema validation
-
-Structural checks enforced by `sdscbundle-schema.json`. A file that fails
-schema validation is rejected by the backend loader before any semantic
-processing occurs. Schema-enforced constraints include required fields,
-enum values, and type constraints on every object in the hierarchy.
-
-### 2. Semantic validation
-
-Cross-field consistency checks that cannot be expressed in JSON Schema,
-enforced by the backend loader and pipeline. Violations result in a
-backend error during compilation:
-
-- `DesignSpaceConfig.numCoresUsed_` must equal the length of
-  `coreIdsUsed_`.
-- All core IDs in `SuperDsc.coreIdToDsc_` must be valid zero-based
-  indices into `dscs_`.
-- Symbol identifier strings in `startAddressCoreCorelet_.data_` must
-  correspond to symbol IDs supplied as operands to
-  `sdscbundle.sdsc_execute` in the accompanying `.mlir` bundle file.
-- Work assigned per core must be a multiple of the stick size for each
-  dimension. See [Stick Layout Constraints](stick-layout-constraints.md).
-- The DDR address span accessed by any single tensor must not exceed
-  256 MB.
 
 ---
 

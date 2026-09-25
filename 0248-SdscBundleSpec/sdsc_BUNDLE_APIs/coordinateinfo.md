@@ -56,8 +56,12 @@ A `CoordinateInfo` object for dimension `"mb"` as it appears inside `coordInfo`:
 }
 ```
 
-In this example, `"mb"` is at spatial level 0, temporal level 0, element-array level 0 (all collapsed
-to a single level), has no padding, and uses a constant fold function with a factor of 32.
+In this example, `"mb"` is at spatial level 0, temporal level 0, element-array level 0 — all
+collapsed to a single level. This is a simplified illustration; in a fully tiled DSC the same
+dimension would typically have `spatial: 3` (core, corelet, row split levels) and `elemArr: 1`
+(non-stick) or `2` (stick), as shown in the [`ScheduleTreeNode`](scheduletreenode.md) worked
+examples. Use `spatial: 0` / `elemArr: 0` only when the dimension is not partitioned across
+the spatial hierarchy.
 
 ---
 

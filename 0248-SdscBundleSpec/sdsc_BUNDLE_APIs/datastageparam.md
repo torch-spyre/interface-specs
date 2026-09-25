@@ -37,7 +37,7 @@ windowed operations such as convolution, `ss_` and `el_` include a
 
 ## Fields
 
-`ss_` and `el_` are required. No additional properties are allowed.
+`ss_` and `el_` are required; `name_` is the only optional field. No additional properties are allowed.
 
 | Field | Type | Required | Constraints | Description |
 |---|---|---|---|---|

@@ -57,12 +57,14 @@ Six fields are required. No additional properties are allowed.
 | `coordinateMasking_` | object | No | — | Coordinate masking configuration for masked operations. |
 | `maskingConstId_` | integer | No | >= -1 | Index into `constantInfo_` of the masking constant, or `-1` when the operation has no masking constant. `-1` is the default. |
 | `pdsRelation_` | object | No | — | Relationship between the input and output primary data structures. Contains a single sub-field `isPdsReuse` (`0` or `1`): `1` means the input and output share the same memory buffer (in-place/reuse); `0` means they are separate buffers. Defaults to `1` (in-place) when absent. Only emitted by the frontend for pool and window operations. |
-| `dataStageParam_` | map&lt;string, object&gt; | No | Keys: `^[0-9]+$` (core ID) | Data staging parameters per core. Each value has `ss_` (steady-state dimensions) and `el_` (epilogue dimensions). See [DataStageParam](datastageparam.md). |
-| `primaryDsInfo_` | map&lt;string, object&gt; | No | Keys: `^[A-Z_]+$` (dsType) | Per-tensor-type layout info. Each value has `layoutDimOrder_`, `stickDimOrder_`, and `stickSize_`. See [PrimaryDsInfo](primarydsinfo.md). |
+| `dataStageParam_` | map&lt;string, object&gt; | No* | Keys: `^[0-9]+$` (core ID) | Data staging parameters per core. Each value has `ss_` (steady-state dimensions) and `el_` (epilogue dimensions). See [DataStageParam](datastageparam.md). |
+| `primaryDsInfo_` | map&lt;string, object&gt; | No* | Keys: `^[A-Z_]+$` (dsType) | Per-tensor-type layout info. Each value has `layoutDimOrder_`, `stickDimOrder_`, and `stickSize_`. See [PrimaryDsInfo](primarydsinfo.md). |
 | `scheduleTree_` | array of [ScheduleTreeNode](scheduletreenode.md) | Yes | — | Ordered list of memory allocation and compute schedule nodes. |
 | `labeledDs_` | array of [LabeledDataStructure](labeleddatastructure.md) | Yes | — | Descriptors for all tensors (input and output) used by this DSC. |
 | `constantInfo_` | map&lt;string, [ConstantInfo](constantinfo.md)&gt; or `"{}"` | No | Keys: `^[0-9]+$` | Named constants used by the operation. Set to the string `"{}"` when no constants are needed. |
 | `computeOp_` | array of [ComputeOperation](computeoperation.md) | Yes | — | Compute operations to execute. More than one entry when operations are fused. |
+
+**\* Conditionally expected:** `dataStageParam_` and `primaryDsInfo_` are optional per the JSON schema but are expected to be present for all compute operations. They may be omitted only for data-shuffle operations (e.g. `ReStickifyOpHBM`) where staging and layout info are not applicable.
 
 ## Example
 

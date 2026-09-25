@@ -6,10 +6,9 @@ tensor in a specific memory component or orchestrates a data-movement step.
 Nodes are linked by their `prev_` field to form a dependency chain, and refer
 to tensors by their zero-based index into `labeledDs_` via `ldsIdx_`.
 
-The schedule tree is a list of nodes that can be of types BLOCK, LOOP,
-TRANSFER, COMPUTE, SYNC, CONDITION, ALLOCATE, and STICKMASK, among others.
-Only `ALLOCATE` nodes need to be filled in from the front end — one per tensor
-in `labeledDs_`.
+The schedule tree contains `allocate` nodes — one per tensor in `labeledDs_`.
+The backend may add other node types during compilation; those are opaque to
+the frontend and do not need to be filled in.
 
 ## Context
 
@@ -44,6 +43,7 @@ in `startAddressCoreCorelet_`. Spatial tiling coordinates are captured in a
   "nonUnifiedAllocInHBM_":     <bool | 0 | 1>,
   "startAddressCoreCorelet_":  <FoldManager>,
   "backGapCore_":              { "<dim>": { "<coreId>": "<gapStr>" } },
+  "padding_":                  <object>,
   "indirectAllocType_":        "<string>",
   "relatedIndirectAccessAlloc_": "<string>",
   "indexTensorType_":          "index" | "address",
@@ -65,7 +65,8 @@ in `startAddressCoreCorelet_`. Spatial tiling coordinates are captured in a
 | `isStartAddrSymbolic_` | boolean or integer (0/1) | No | `true`/`false` or `1`/`0` | When true (`1`), the `data_` values in `startAddressCoreCorelet_` are symbolic identifiers rather than concrete byte offsets. See [`startAddressCoreCorelet_`](#startaddresscorecorelet_) below. |
 | `nonUnifiedAllocInHBM_` | boolean or integer (0/1) | No | `true`/`false` or `1`/`0` | Layout style for HBM allocations. `false` (the default) indicates unified layout: the tensor lives in HBM as a single tensor covering all cores sized by `N_`, and each core's data is a sub-rectangle reached from a common base address. `true` indicates non-unified layout: data each core needs is stored as an independent smaller tensor sized by the per-core `"core"` datastage, placed independently in HBM (not necessarily contiguous, no common stride). Non-unified implies per-core start addresses in `startAddressCoreCorelet_` (core fold as `Map`) and LX-like core coordinates. Ignored when `component_` is not `"hbm"`. See [`nonUnifiedAllocInHBM_`](#nonunifiedallocinhbm_) below. |
 | `startAddressCoreCorelet_` | [FoldManager](foldmanager.md) | No | — | Per-core / per-corelet start address for this allocation, expressed as a FoldManager. See [`startAddressCoreCorelet_`](#startaddresscorecorelet_) below. |
-| `backGapCore_` | `map<dim, map<coreId, string>>` | No | Written conditionally when `tensor.backGap` is true | Back-gap size (in elements) per dimension per core. Outer key is a dimension name (`^[A-Za-z_][A-Za-z0-9_]*$`); inner key is a core ID (`^-?[0-9]+$`, where `"-1"` denotes HBM); value is the gap size as a decimal string. |
+| `backGapCore_` | `map<dim, map<coreId, string>>` | No | Outer keys: dim names; inner keys: core IDs as decimal strings | Back-gap size (in elements) per dimension per core. Outer key is a dimension name (`^[A-Za-z_][A-Za-z0-9_]*$`); inner key is a core ID (`^-?[0-9]+$`, where `"-1"` denotes HBM); value is the gap size as a decimal string. Populated for restickify ops where stick-alignment widening creates a shortfall between the iteration extent and the tensor's device size — see [Stick-Alignment Padding](stick-padding.md). |
+| `padding_` | object | No | — | Padding parameters for this allocation. Set when the tensor requires memory padding beyond its logical size. See [Padding](padding.md) for details. |
 | `indirectAllocType_` | string | No | — | One of `no_indirection`, `index_tensor`, or `value_tensor`. `no_indirection` = ordinary direct allocation; `index_tensor` = holds indices for a gather/scatter; `value_tensor` = holds the data gathered/scattered via those indices. |
 | `relatedIndirectAccessAlloc_` | string | No | Must match another node's `name_`; non-empty only when `indirectAllocType_` is `"index_tensor"` | Name of the related allocation node that provides actual data for the indirect reference. |
 | `indexTensorType_` | string enum | No | `"index"` or `"address"`; only present when `indirectAllocType_` is `"index_tensor"` | How the index tensor's elements are interpreted: `"index"` = element indices; `"address"` = precomputed byte addresses. |
@@ -132,8 +133,64 @@ to `true` / `1` when symbolic addresses are used.
 `coordInfo` map holds one [`CoordinateInfo`](coordinateinfo.md) entry per
 tensor dimension. Each entry describes how that dimension is progressively split
 across cores, corelets, rows, and the final leaf entities via its `folds`
-[`FoldManager`](foldmanager.md). See [`CoordinateContainer`](coordinatecontainer.md)
-and [`CoordinateInfo`](coordinateinfo.md) for full schema details, field definitions, and examples.
+[`FoldManager`](foldmanager.md).
+
+### CoordinateInfo fields
+
+| Field | Values | Description |
+|---|---|---|
+| `spatial` | `3` when split across cores/corelets/rows; `0` when collapsed/unpartitioned | Number of spatial split levels (core, corelet, row). Use `0` when the dimension is not partitioned across the spatial hierarchy. |
+| `temporal` | `0` | Set to `0` by the frontend. |
+| `elemArr` | `1` for non-stick dimensions; `2` for stick dimensions; `0` when collapsed | Encodes whether this dimension maps to leaf elements or multiple sticks per slice. Use `0` when the dimension is collapsed (matches `spatial: 0`). |
+| `padding` | `"nopad"`, `"lowered_padded"`, `"padded_nozeropad"`, `"padded_wzeropad"`, `"padded_fullspan"`, or `"padded_fullspan_wunneeded"` | Padding state for this dimension. `"nopad"` is the common case; see [CoordinateInfo](coordinateinfo.md) for the full enum and [Padding](padding.md) for semantics. |
+| `folds` | [FoldManager](foldmanager.md) | Encodes the dimension split hierarchy. |
+
+### folds hierarchy
+
+The `dim_prop_attr` labels in `coordinates_.coordInfo.<dim>.folds` follow a
+fixed split hierarchy:
+
+| Label | Level |
+|---|---|
+| `core_fold` | Split across cores |
+| `corelet_fold` | Split across corelets within a core |
+| `row_fold` | Split across rows within a corelet |
+| `elem_arr_0` | Element count in the innermost (leaf) slice |
+| `elem_arr_1` | Number of sticks per slice (stick dimensions only) |
+
+The general structure is:
+
+```json
+"coordinates_": {
+  "coordInfo": {
+    "<dim_name>": {
+      "spatial":  3,
+      "temporal": 0,
+      "elemArr":  1,
+      "padding":  "nopad",
+      "folds": {
+        "dim_prop_func": [
+          {"Affine": {"alpha_": <cores spanned per core-wise split>, "beta_": 0}},
+          {"Affine": {"alpha_": 1, "beta_": 0}},
+          {"Affine": {"alpha_": 1, "beta_": 0}},
+          {"Affine": {"alpha_": <size of leaf slice>, "beta_": 0}}
+        ],
+        "dim_prop_attr": [
+          {"factor_": <number of core-wise splits>,    "label_": "core_fold"},
+          {"factor_": <number of corelet splits>,      "label_": "corelet_fold"},
+          {"factor_": <number of row splits>,          "label_": "row_fold"},
+          {"factor_": <number of elements per slice>,  "label_": "elem_arr_0"}
+        ]
+      }
+    }
+  }
+}
+```
+
+For a **stick dimension** `coordInfo.elemArr` is `2` and `dim_prop_attr`
+includes an additional `elem_arr_1` entry. The `factor_` of `elem_arr_0` gives
+the number of elements per stick; the `factor_` of `elem_arr_1` gives the
+number of sticks in the slice.
 
 ### Worked example
 

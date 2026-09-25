@@ -224,7 +224,6 @@
                 "dataFormat_": "SEN169_FP16",
                 "fidelity_": "regular"
               },
-              "location": "Inner",
               "inputLabeledDs": ["gelu-Tensor0-idx0"],
               "outputLabeledDs": ["gelu-Tensor1-idx1"]
             }

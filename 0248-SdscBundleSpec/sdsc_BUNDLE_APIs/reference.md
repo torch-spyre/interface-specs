@@ -1,4 +1,4 @@
-# Reference Documents
+# References
 
 ## Related Documents
 
@@ -11,6 +11,11 @@
 - [SCF Dialect](https://mlir.llvm.org/docs/Dialects/SCFDialect/)
 - [Affine Dialect](https://mlir.llvm.org/docs/Dialects/Affine/)
 - [Arith Dialect](https://mlir.llvm.org/docs/Dialects/ArithDialect/)
+- [Math Dialect](https://mlir.llvm.org/docs/Dialects/MathDialect/)
+
+## Normative Schema
+
+- [SDSC Bundle JSON Schema](sdscbundle-schema.json)
 
 ---
 

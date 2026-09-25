@@ -615,17 +615,12 @@ Add a fixed offset to a base address:
 %addr   = arith.addi %base, %offset : index
 ```
 
-Combine a base address with a loop-derived stride:
+Derive two per-core sub-buffer addresses from a common pool base:
 
 ```mlir
-%base     = arith.constant 1024 : index
-%stride   = arith.constant 128  : index
-%i_stride = arith.muli %i, %stride : index
-%addr     = arith.addi %base, %i_stride : index
-sdscbundle.sdsc_execute (%addr) {
-  sdsc_filename="sdsc.json",
-  symbol_ids=[-1]
-}
+%pool    = sdscbundle.device_mem_allocate 32768 bytes : index
+%offset  = arith.constant 16384 : index
+%addr_lo = arith.addi %pool, %offset : index   // second half of the pool
 ```
 
 ---

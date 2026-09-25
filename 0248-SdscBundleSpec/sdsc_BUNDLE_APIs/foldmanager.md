@@ -33,8 +33,7 @@ practice, see [ScheduleTreeNode](scheduletreenode.md).
   "dim_prop_func": [
     { "Const": {} }
     | { "Map": {} }
-    | { "Affine": {"alpha_": <int>, "beta_": <int>} }
-    | { "WkSplit": {} },
+    | { "Affine": {"alpha_": <int>, "beta_": <int>} },
     ...
   ],
   "dim_prop_attr": [
@@ -68,7 +67,6 @@ how the fold index for that dimension is resolved:
 | `Const` | `{"Const": {}}` | The value is the same for all indices at this dimension level. The single entry in `data_` (keyed `"[0]"` or `"[0, 0]"`) is used regardless of the loop index. |
 | `Map` | `{"Map": {}}` | The value is looked up in `data_` using the fold-coordinate tuple. Each combination of indices maps to a distinct entry. Used for per-core start addresses. |
 | `Affine` | `{"Affine": {"alpha_": <int>, "beta_": <int>}}` | The value is computed as `alpha_ * index + beta_`. No `data_` lookup needed. Used for coordinates that follow a linear stride. |
-| `WkSplit` | `{"WkSplit": {}}` | The value is the work-slice index assigned to this core for this dimension. Resolved at runtime from `coreIdToWkSlice_`. |
 
 ## Example
 

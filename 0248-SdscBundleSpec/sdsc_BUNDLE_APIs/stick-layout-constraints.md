@@ -146,7 +146,8 @@ All other precision formats follow BatchMatmul constraints.
 Restickify converts a tensor from one stick layout to another — used when the
 graph contains a reshape or layout change that requires re-tiling the data
 (e.g. after a `VirtualReshape`). The `HBM` suffix indicates that data flows
-through HBM during the conversion.
+through HBM during the conversion. For the stick-alignment widening that restickify
+introduces into `backGapCore_`, see [Stick-Alignment Padding](stick-padding.md).
 
 **Constraints:**
 
@@ -197,5 +198,5 @@ operations that reduce along a single dimension.
 
 ---
 
-| [← Previous: Padding](padding.md) | [↑ Table of Contents](README.md) | [Next: DesignSpaceConfig →](designspaceconfig.md) |
+| [← Previous: Stick-Alignment Padding](stick-padding.md) | [↑ Table of Contents](README.md) | [Next: DesignSpaceConfig →](designspaceconfig.md) |
 |:--|:--:|--:|

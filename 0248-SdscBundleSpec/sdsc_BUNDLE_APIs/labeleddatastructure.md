@@ -106,7 +106,7 @@ same tensor is referenced by name in `computeOp_`.
 "computeOp_": [
   {
     "exUnit": "sfp",
-    "opFuncName": "convolution",
+    "opFuncName": "conv2d",
     "inputLabeledDs":  ["convolution-Tensor0-idx0"],
     "outputLabeledDs": ["convolution-Tensor1-idx1"]
   }

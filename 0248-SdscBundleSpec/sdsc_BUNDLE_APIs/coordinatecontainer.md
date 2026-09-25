@@ -40,6 +40,8 @@ It groups the coordinate info for all dimensions of a tensor alongside the core-
 
 ## Example
 
+The example below shows a collapsed `mb` dimension (`spatial: 0`, `elemArr: 0`) — the dimension is not partitioned across the spatial hierarchy so it does not participate in per-core or per-corelet splits. For a fully tiled dimension the same field would carry `spatial: 3` and `elemArr: 1` (non-stick) or `2` (stick). See [CoordinateInfo](coordinateinfo.md) for the full description of each field.
+
 ```json
 "coordinates_": {
   "coordInfo": {
