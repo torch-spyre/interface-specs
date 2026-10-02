@@ -46,7 +46,7 @@ for this object.
 
 No fields are required; include only the dimensions relevant to the operation.
 
-**Note on dim field values:** All numeric dimension fields accept either a number (typically `-1` when unset, or a positive value when set) or an empty object `{}`. The empty-object form is emitted in some symbolic-dimension contexts and must be tolerated by readers.
+**Note on dim field values:** All numeric dimension fields accept either a number (typically `-1` when unset, or a positive value when set) or an empty object `{}`. The empty-object form is emitted in some symbolic-dimension contexts and MUST be tolerated by readers.
 
 ### Primary dimension fields
 
@@ -98,8 +98,8 @@ a value inside `DataStructDims.symbolicDimInfo_`, keyed by dimension name
 
 | JSON field | Type | Required | Constraints | Description |
 |---|---|---|---|---|
-| `maxSize_` | integer | Yes | >= 1 | Upper bound the backend must plan memory for. The runtime value supplied at job launch must not exceed this. Corresponds to the `max_value` annotation on `!sdscbundle.input_arg<index, max_value=N>` in the MLIR bundle. |
-| `granularity_` | integer | Yes | >= 1 | Step size the runtime value must be a multiple of. For a dimension split across N cores, `granularity_` must be a multiple of N. Corresponds to the `granularity` annotation on `!sdscbundle.input_arg<index, granularity=N>` in the MLIR bundle. |
+| `maxSize_` | integer | Yes | >= 1 | Upper bound the backend MUST plan memory for. The runtime value supplied at job launch MUST NOT exceed this. Corresponds to the `max_value` annotation on `!sdscbundle.input_arg<index, max_value=N>` in the MLIR bundle. |
+| `granularity_` | integer | Yes | >= 1 | Step size the runtime value MUST be a multiple of. For a dimension split across N cores, `granularity_` MUST be a multiple of N. Corresponds to the `granularity` annotation on `!sdscbundle.input_arg<index, granularity=N>` in the MLIR bundle. |
 
 ### JSON ↔ MLIR name mapping
 
@@ -108,7 +108,7 @@ a value inside `DataStructDims.symbolicDimInfo_`, keyed by dimension name
 | `maxSize_` | `max_value=N` | `sdscbundle.input_arg_extract max_value` |
 | `granularity_` | `granularity=N` | `sdscbundle.input_arg_extract granularity` |
 
-See [`sdscbundle.input_arg_extract`](MLIR-bundle-API.md#sdscbundleinput_arg_extract) for the full MLIR usage.
+See [`sdscbundle.input_arg_extract`](../dialect/MLIR-bundle-API.md#sdscbundleinput_arg_extract) for the full MLIR usage.
 
 ### Example
 
@@ -166,5 +166,4 @@ the full-size tile (2) and `el_` holds the smaller final tile (1):
 
 ---
 
-| [← Previous: PrimaryDsInfo](primarydsinfo.md) | [↑ Table of Contents](README.md) | [Next: DataStageParam →](datastageparam.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../../SuperDSC-Bundle.md#spec-map)|

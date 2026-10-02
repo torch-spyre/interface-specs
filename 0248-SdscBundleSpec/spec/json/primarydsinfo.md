@@ -5,7 +5,7 @@
 [`DesignSpaceConfig`](designspaceconfig.md). It specifies the order in which
 dimensions are laid out in memory, which dimensions form a "stick" (the
 innermost contiguous unit of storage), and the size of each stick dimension.
-Every tensor type that appears in the `labeledDs_` array should have a
+Every tensor type that appears in the `labeledDs_` array SHOULD have a
 corresponding entry here.
 
 ## Context
@@ -44,7 +44,7 @@ labels such as `INPUT`, `OUTPUT`, `KERNEL`, or `KERNEL_IDX`.
 
 ### Relationship between `stickDimOrder_` and `stickSize_`
 
-`stickDimOrder_` and `stickSize_` are parallel arrays and must have the same
+`stickDimOrder_` and `stickSize_` are parallel arrays and MUST have the same
 length. Together they define one contiguous storage tile: for example,
 `"stickDimOrder_": ["in"]` with `"stickSize_": [64]` means each stick holds
 64 elements along the `in` (input-channel) dimension.
@@ -80,5 +80,4 @@ to establish which layout applies to a given tensor in the `labeledDs_` array.
 
 ---
 
-| [← Previous: MemoryOrganization](memoryorganization.md) | [↑ Table of Contents](README.md) | [Next: DataStructDims →](datastructdims.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../../SuperDSC-Bundle.md#spec-map)|

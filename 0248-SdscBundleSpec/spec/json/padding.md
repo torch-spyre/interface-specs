@@ -1,6 +1,6 @@
 # Padding
 
-For window/padded operations, such as convolution, padding information must be added to both `N_` and `dataStageParam_` in `sdsc.dscs_[0]`, capturing information about front/back padding, stride, and related kernel dimension. If a padded dimension is chunked across cores, front/back padding must be set to `-1` in the core datastage entry.
+For window/padded operations, such as convolution, padding information MUST be added to both `N_` and `dataStageParam_` in `sdsc.dscs_[0]`, capturing information about front/back padding, stride, and related kernel dimension. If a padded dimension is chunked across cores, front/back padding MUST be set to `-1` in the core data staging entry.
 
 When a dimension is padded due to window/padded operations like convolution, details of padding need to be specified via the following fields. `paddingSizes_` is only emitted when `sdsc_spec.padding_sizes` is non-empty — currently convolution and pooling families of operators (**avgpool2d**, **maxpool2d**, **conv2d**, and **depthwise conv2d**). All other operations (pointwise, matmul, reductions, transpose, etc.) leave it absent entirely.
 
@@ -14,7 +14,7 @@ When a dimension is padded due to window/padded operations like convolution, det
 | `dataStageParam_[0].ss_` (per-core schedule) | `padding_sizes_per_core` in the steady-state phase if set, else `padding_sizes` |
 | `dataStageParam_[0].el_` (per-core element loop) | `padding_sizes_per_core` in the epilogue phase if set, else `padding_sizes` |
 
-If a padded dimension is chunked across cores, `padFront_` and `padBack_` must be set to `-1` in the core datastage entry (that is, in the entries under `dataStageParam_[0]`).
+If a padded dimension is chunked across cores, `padFront_` and `padBack_` MUST be set to `-1` in the core data staging entry (that is, in the entries under `dataStageParam_[0]`).
 
 ### Fields
 
@@ -84,7 +84,7 @@ for (remaining = unneededPad_; remaining > 0; remaining--) {
 real data has been given up, but that count is never emitted — which is precisely
 why `unneededPad_` can exceed the two front/back counters.
 
-Two consequences a producer must respect:
+Two consequences a producer MUST respect:
 
 1. **`padFront_`/`padBack_` are net values.** They are *decremented* as the
    unneeded counters are incremented, so the emitted `padFront_`/`padBack_` are
@@ -123,5 +123,4 @@ The rows split cleanly along the `unneededPad_ > padBack` condition above:
 
 ---
 
-| [← Previous: FoldManager](foldmanager.md) | [↑ Table of Contents](README.md) | [Next: Stick-Alignment Padding →](stick-padding.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../../SuperDSC-Bundle.md#spec-map)|

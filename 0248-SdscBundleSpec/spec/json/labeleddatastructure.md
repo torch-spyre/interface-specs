@@ -4,7 +4,7 @@ A `LabeledDataStructure` describes a single physical tensor used by a
 [`DesignSpaceConfig`](designspaceconfig.md). It carries the tensor's role
 (`INPUT`, `OUTPUT`, `KERNEL`, or `KERNEL_IDX`), data format, per-dimension
 scale factors, word length, and memory residency. Both input and output tensors
-must be listed in `labeledDs_`.
+MUST be listed in `labeledDs_`.
 
 ## Context
 
@@ -38,7 +38,7 @@ reference individual tensors by the composite name
 
 ## Fields
 
-All five required fields must be present. No additional properties are allowed.
+All five required fields MUST be present. No additional properties are allowed.
 
 | Field | Type | Required | Constraints | Description |
 |---|---|---|---|---|
@@ -118,5 +118,4 @@ same tensor is referenced by name in `computeOp_`.
 
 ---
 
-| [← Previous: DesignSpaceConfig](designspaceconfig.md) | [↑ Table of Contents](README.md) | [Next: MemoryOrganization →](memoryorganization.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../../SuperDSC-Bundle.md#spec-map)|

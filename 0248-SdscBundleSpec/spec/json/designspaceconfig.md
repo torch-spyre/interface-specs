@@ -101,5 +101,4 @@ A minimal 2-core GELU DSC showing required fields only:
 
 ---
 
-| [← Previous: Stick Layout Constraints](stick-layout-constraints.md) | [↑ Table of Contents](README.md) | [Next: LabeledDataStructure →](labeleddatastructure.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../../SuperDSC-Bundle.md#spec-map)|

@@ -76,5 +76,4 @@ This example demonstrates:
 
 ---
 
-| [← Previous: Bundle Usage Examples](MLIR-bundle-usage-examples.md) | [↑ Table of Contents](README.md) | [Next: SDSC JSON API →](SDSC-json-api.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../SuperDSC-Bundle.md#spec-map)|

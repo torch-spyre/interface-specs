@@ -78,5 +78,4 @@ A minibatch of 5 split across 2 time steps (3 + 2). Steady-state processes
 
 ---
 
-| [← Previous: DataStructDims](datastructdims.md) | [↑ Table of Contents](README.md) | [Next: ScheduleTreeNode →](scheduletreenode.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../../SuperDSC-Bundle.md#spec-map)|

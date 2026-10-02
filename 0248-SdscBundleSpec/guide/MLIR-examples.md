@@ -269,7 +269,7 @@ marks `mb_` as symbolic; `symbolicDimInfo_` constrains the valid runtime range:
   which the backend matches to the first operand of `sdsc_execute`.
 - `symbolicDimInfo_` in each `DataStageParam` provides the backend with
   `maxSize_: 32` (upper bound for memory planning) and `granularity_: 1`
-  (runtime value must be a multiple of 1).
+  (runtime value MUST be a multiple of 1).
 - Because this is a single-core operation the start addresses are symbolic but
   not dimension-derived — they are independently provided by the caller as
   symbol IDs `-2` and `-3`.
@@ -278,7 +278,7 @@ marks `mb_` as symbolic; `symbolicDimInfo_` constrains the valid runtime range:
 
 **Use Case:** A 2-core operation where the batch dimension is both symbolic
 *and* split across cores. Each core's start address depends on the runtime
-batch size, so `isStartAddrSymbolic_` must also be set and the per-core address
+batch size, so `isStartAddrSymbolic_` MUST also be set and the per-core address
 entries in `startAddressCoreCorelet_` are themselves symbolic identifiers.
 
 **MLIR:**
@@ -368,7 +368,7 @@ module {
   dimension is split across two cores — the per-core address depends on the
   runtime batch size, so it cannot be a concrete integer in the JSON.
 - The `granularity_` constraint on `mb_` ensures the runtime value is always
-  evenly divisible by the number of cores (`granularity_` must be a multiple
+  evenly divisible by the number of cores (`granularity_` MUST be a multiple
   of the number of work slices in that dimension).
 
 ## Loop with Dynamic Addresses
@@ -505,10 +505,9 @@ module {
 
 **Key points:**
 - `device_mem_allocate` is placed in the entry block, outside any loop, so one buffer is reserved regardless of how many times surrounding control flow would pass through it.
-- Each `arith.addi` computes an absolute device address by adding a constant offset to the pool base; alignment must be satisfied by the choice of offset.
-- The frontend owns the layout: it must ensure that sub-ranges whose live ranges overlap are given disjoint offset intervals.
+- Each `arith.addi` computes an absolute device address by adding a constant offset to the pool base; alignment MUST be satisfied by the choice of offset.
+- The frontend owns the layout: it MUST ensure that sub-ranges whose live ranges overlap are given disjoint offset intervals.
 
 ---
 
-| [← Previous: MLIR Bundle API](MLIR-bundle-API.md) | [↑ Table of Contents](README.md) | [Next: Complete Example →](MLIR-complete-example.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../SuperDSC-Bundle.md#spec-map)|

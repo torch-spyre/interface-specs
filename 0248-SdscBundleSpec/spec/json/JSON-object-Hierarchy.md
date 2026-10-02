@@ -5,7 +5,7 @@ The following diagram shows the complete object hierarchy of the sdscbundle-sche
 ```
 Root Object (Dynamic operation name key, e.g., "exp", "matmul")
 │
-└─── SuperDsc (Bundle-level configuration)
+└─── SuperDSC (Bundle-level configuration)
      │
      ├─── sdscFoldProps_: Array<FoldProperty>
      │    └─── FoldProperty
@@ -157,7 +157,7 @@ Root Object (Dynamic operation name key, e.g., "exp", "matmul")
 ## Key Structural Points
 
 1. **Root Level**: Dynamic operation name as key (e.g., "exp", "matmul", "softmax")
-2. **SuperDsc**: Bundle-level configuration containing fold properties and array of DSCs
+2. **SuperDSC**: Bundle-level configuration containing fold properties and array of DSCs
 3. **WrappedDesignSpaceConfig**: Each DSC in the `dscs_` array is wrapped with operation name
 4. **DesignSpaceConfig**: Core operation configuration with tensors, scheduling, and compute ops
 5. **FoldManager**: Reusable structure for coordinate management at multiple levels
@@ -170,11 +170,10 @@ Root Object (Dynamic operation name key, e.g., "exp", "matmul")
 12. **DebugHandle**: Nestable provenance handle mirroring MLIR locations. `fused_from` is recursive.
 13. **CoordinateInfo.padding**: Six specific values replacing the former `"pad"` catch-all — use `"padded_nozeropad"`, `"padded_wzeropad"`, `"padded_fullspan"`, `"padded_fullspan_wunneeded"`, or `"lowered_padded"` as appropriate.
 14. **wordLength**: A `number` (not integer) to support sub-byte formats — 4-bit types carry `0.5`.
-15. **indirectAllocType_**: Constrained to `"no_indirection"`, `"value_tensor"`, or `"index_tensor"`; when `"index_tensor"`, `indexTensorType_` must also be present.
+15. **indirectAllocType_**: Constrained to `"no_indirection"`, `"value_tensor"`, or `"index_tensor"`; when `"index_tensor"`, `indexTensorType_` MUST also be present.
 16. **fidelity_**: Valid values are `"regular"` and `"fast"` (`"high"` and `"low"` are no longer valid).
 17. **coreIdToDscSchedule Step Tuple**: 4-integer array `[datadsc_idx, dldsc_idx, before_sync, after_sync]`, where `datadsc_idx` indexes `datadscs_` (`-1` by default), `dldsc_idx` indexes `dscs_` (`0` for single-DSC bundles), and `before_sync`/`after_sync` are `0`/`1` barrier flags. Common default: `[-1, 0, 0, 0]`.
 
 ---
 
-| [← Previous: SDSC JSON API](SDSC-json-api.md) | [↑ Table of Contents](README.md) | [Next: JSON Schema →](sdscbundle-schema.json) |
-|:--|:--:|--:|
+[↑ Spec Map](../../SuperDSC-Bundle.md#spec-map)|

@@ -173,5 +173,4 @@ The `opFuncName` value must be one of the strings in the table below.
 
 ---
 
-| [← Previous: CoordinateInfo](coordinateinfo.md) | [↑ Table of Contents](README.md) | [Next: ConstantInfo →](constantinfo.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../../SuperDSC-Bundle.md#spec-map)|

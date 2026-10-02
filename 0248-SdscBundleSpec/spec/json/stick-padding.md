@@ -1,6 +1,6 @@
 # Stick-Alignment Padding (layout padding)
 
-Every device tensor's **stick dimension** must be a whole multiple of the stick
+Every device tensor's **stick dimension** MUST be a whole multiple of the stick
 size.  When a logical extent is not, the producer widens it.  This padding is
 **independent of any operation** — it follows from the tensor layout alone — and
 it is therefore *not* the same thing as the window padding described in
@@ -43,9 +43,11 @@ quantity: a **restickify** op.  On a `restickify` op, stick-alignment widening i
 to the iteration space for both the old and the new stick dim. A dim that is not given arg's
 stick dimension — typically the input's old stick dim — can then have a device size smaller than
 the widened iteration extent. The shortfall is emitted as a positive `backGapCore_` entry on that arg.
+For HBM restickify allocations use `"-1"` as the core ID key (the sentinel for
+HBM); for LX allocations use the actual core ID. See
+[`backGapCore_`](scheduletreenode.md#fields) for the full field description.
 The stick dim's own widening stays undeclared.
 
 ---
 
-| [← Previous: Padding](padding.md) | [↑ Table of Contents](README.md) | [Next: Stick Layout Constraints →](stick-layout-constraints.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../../SuperDSC-Bundle.md#spec-map)|

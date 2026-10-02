@@ -74,5 +74,4 @@ splitting at that level (all cores see the same slice).
 
 ---
 
-| [← Previous: SuperDsc Object](superdsc-object.md) | [↑ Table of Contents](README.md) | [Next: FoldManager →](foldmanager.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../../SuperDSC-Bundle.md#spec-map)|

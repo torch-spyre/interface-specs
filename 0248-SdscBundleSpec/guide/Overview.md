@@ -4,12 +4,12 @@ The SuperDSC-Bundle API defines the interface between [torch-spyre](https://torc
 
 SuperDSC stands for ***Super Design Space Configuration*** and is a JSON-based IR designed to describe the tile-level compute graph for the 32 cores of Spyre.
 A SuperDSC-Bundle enables the expression of data-parallel mappings for complex kernels across multi-core accelerators.
-Follow the link for a description of the [SuperDSC-Bundle Interface Specification](https://github.com/torch-spyre/interface-specs/blob/main/0248-SdscBundleSpec/SuperDSC-Bundle.md).
+Follow the link for a description of the [SuperDSC-Bundle Interface Specification](../SuperDSC-Bundle.md).
 
 The figure below illustrates what is called the Spyre Stack where a user-written PyTorch program is compiled by torch-spyre to generate a set of files known as the **SuperDSC-Bundle**. A PyTorch file may translate into several SuperDSC-Bundles, each one being composed of a ***bundle.mlir*** file and several ***sdsc_\*.json*** files, each JSON file describing a torch operation (a full list of supported PyTorch operations can be found in [torch-spyre](https://torch-spyre.readthedocs.io/)).
 Each SuperDSC-Bundle is compiled by **DeepTools** to generate the assembly code that runs on the Spyre AI Accelerator Card. Furthermore, the compiler also generates the execution plan that manages the execution of an operation as well as intra-memory data movement on the Spyre Card.
 
-![High-Level View of SuperDSC-Bundle API within torch-spyre stack](figures/torch_spyre_backend_flow.png)
+![High-Level View of SuperDSC-Bundle API within torch-spyre stack](../spec/json/figures/torch_spyre_backend_flow.png)
 
 *Figure 1: High-Level View of SuperDSC-Bundle API within torch-spyre stack*
 
@@ -34,14 +34,14 @@ SuperDSC-Bundle views Spyre hardware at the **data-parallel level of hardware ab
 - **On-chip interconnect fabric** connecting cores and off-chip memory banks
 - **Off-chip memory** (HBM/DDR) for large data storage
 
-![Hardware abstraction of multi-core accelerator embodied in SuperDSC-Bundle](figures/data_parallel_hw_abstraction.png)
+![Hardware abstraction of multi-core accelerator embodied in SuperDSC-Bundle](../spec/json/figures/data_parallel_hw_abstraction.png)
 
 *Figure 2: Hardware abstraction of multi-core accelerator embodied in **SuperDSC-Bundle***
 
 This abstraction enables frontend compilers to express:
 
 - Complex kernels comprised of operation sequences
-- Work division (computation split) across RaPiD cores
+- Work division (computation split) across Spyre cores
 - Tensor placement in DDR memory or LX scratchpad
 - Static or symbolic shapes and start addresses
 
@@ -59,11 +59,11 @@ The API consists of two primary components:
 1. **MLIR Bundle File** (`.mlir`) — Orchestrates execution flow and symbol management
 2. **SDSC JSON Files** (`.json`) — Defines individual operations and their core mappings
 
-All `sdsc_*.json` files must conform to the [SDSC Bundle JSON Schema](sdscbundle-schema.json).
+All `sdsc_*.json` files MUST conform to the [SDSC Bundle JSON Schema](../spec/sdscbundle-schema.json).
 The schema provides machine-readable type constraints, required-field enforcement, and enum
 validation for every object in the hierarchy. It is the normative reference for structural
 correctness; semantic constraints (cross-field consistency) are described in the individual
-object pages linked from [SDSC JSON API](SDSC-json-api.md).
+object pages linked from [SDSC JSON API](../spec/json/SDSC-json-api.md).
 
 ## Important Notes
 
@@ -83,5 +83,4 @@ DesignSpaceConfig can represent **BOTH** deep learning operators AND data-shuffl
 
 ---
 
-| [↑ Table of Contents](README.md) | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | [Next: Bundle API →](MLIR-bundle-API.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../SuperDSC-Bundle.md#spec-map)|

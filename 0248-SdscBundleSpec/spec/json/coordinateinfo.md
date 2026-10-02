@@ -28,8 +28,8 @@ All five fields are required. No additional properties are allowed.
 
 | Field | Type | Required | Constraints | Description |
 |---|---|---|---|---|
-| `spatial` | integer | Yes | >= 0 | Number of spatial split levels (e.g. core, corelet, row). Set to `3` when the dimension is split across cores, corelets, and rows; or `0` when collapsed or unpartitioned across the spatial hierarchy. |
-| `temporal` | integer | Yes | >= 0 | Number of temporal split levels for LX scratchpad staging passes. Set to `0` by the frontend. |
+| `spatial` | integer | Yes | `3` or `0` | `3` = dimension is partitioned across cores; `0` = dimension is collapsed / not partitioned. The frontend always emits one of these two values; intermediate values are not used. |
+| `temporal` | integer | Yes | `0` | Always set to `0` by the frontend. |
 | `elemArr` | integer | Yes | >= 0 | Element array level: `1` for non-stick dimensions, `2` for stick dimensions, or `0` when collapsed. Encodes whether this dimension maps to the innermost leaf elements or multiple sticks per slice. |
 | `padding` | string | Yes | `"nopad"`, `"lowered_padded"`, `"padded_nozeropad"`, `"padded_wzeropad"`, `"padded_fullspan"`, or `"padded_fullspan_wunneeded"` | Padding state for this dimension in the allocated buffer. `"nopad"` = no padding; `"lowered_padded"` = padding collapsed into a lowered layout; `"padded_nozeropad"` = padded but region is not zeroed (used with conv2d when padding is non-zero); `"padded_wzeropad"` = padded and region is zero-filled; `"padded_fullspan"` = full-span padding; `"padded_fullspan_wunneeded"` = full-span padding with unneeded pad elements (used with conv2d when padding is zero). |
 | `folds` | [FoldManager](foldmanager.md) | Yes | — | Defines how the coordinate value for this dimension is computed across the hierarchy using affine or constant fold functions. See [FoldProperty](foldproperty.md#folds-hierarchy) for hierarchy labels. |
@@ -65,5 +65,4 @@ the spatial hierarchy.
 
 ---
 
-| [← Previous: CoordinateContainer](coordinatecontainer.md) | [↑ Table of Contents](README.md) | [Next: ComputeOperation →](computeoperation.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../../SuperDSC-Bundle.md#spec-map)|

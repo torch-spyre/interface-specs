@@ -122,5 +122,4 @@ Core index `i` maps to coordinate `32 * i`. The corelet dimension has
 
 ---
 
-| [← Previous: FoldProperty](foldproperty.md) | [↑ Table of Contents](README.md) | [Next: Padding →](padding.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../../SuperDSC-Bundle.md#spec-map)|

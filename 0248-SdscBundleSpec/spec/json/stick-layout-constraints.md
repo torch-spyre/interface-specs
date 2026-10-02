@@ -2,7 +2,7 @@
 
 ## Overview
 
-Each operation category imposes constraints on stick composition, restricting which dimensions can be present in the stick. Tensors must be padded to meet these constraints. There are no constraints on tensor layout beyond the stick.
+Each operation category imposes constraints on stick composition, restricting which dimensions can be present in the stick. Tensors MUST be padded to meet these constraints. There are no constraints on tensor layout beyond the stick.
 
 **Important:** Stick constraints can cause a ripple effect—a tensor may need padding even in its non-stick dimension if that dimension appears in the stick of another tensor feeding the same operation. This ensures dimension span consistency across all tensors.
 
@@ -32,7 +32,7 @@ The BatchMatmul operation has 4 types of semantic dimensions:
 - FP8/INT8: `[reduction_dim=2, generated_dim=64]`
 - INT4: `[reduction_dim=4, generated_dim=64]`
 
-**Note:** Input2 must be padded along `reduction_dim` (even though it's not in its stick) because `reduction_dim` is part of Input1's stick. This ensures dimension span consistency.
+**Note:** Input2 MUST be padded along `reduction_dim` (even though it's not in its stick) because `reduction_dim` is part of Input1's stick. This ensures dimension span consistency.
 
 ## Convolution
 
@@ -47,7 +47,7 @@ All other precision formats follow BatchMatmul constraints.
 
 **Stick Reductions (sum/max/min/mean/absmax/exx2):**
 
-- Reduction dimension must be the **only** dimension in stick
+- Reduction dimension MUST be the **only** dimension in stick
 - Same stick layout for input and output
 - Output has `scale=-2` for reduced dimension (stick dimension)
 
@@ -61,16 +61,17 @@ All other precision formats follow BatchMatmul constraints.
 
 **Constraints:**
 
-- Any stick layout is acceptable, but all inputs and outputs must have the same stick layout.
-- If a stick dimension has broadcast in a tensor, all stick dimensions of that tensor must have broadcast.
-- If a stick dimension has broadcast in all tensors (inputs and output), then its size in the SDSC must be set to the number of elements that one stick would have if that dimension actually existed.
+- Any stick layout is acceptable, but all inputs and outputs MUST have the same stick layout.
+- If a stick dimension has broadcast in a tensor, all stick dimensions of that tensor MUST have broadcast.
+- If a stick dimension has broadcast in all tensors (inputs and output), then its size in the SDSC MUST be set to the number of elements that one stick would have if that dimension actually existed.
 
 ## Scan Operations
 
 **Top-K Operations:**
 
-- Neither the reduction dimension nor k can be in the stick
-- Any number of other dimensions can be in the stick
+- The reduction dimension and k MUST NOT be in the stick
+- Any number of other dimensions MAY be in the stick
+- The output tensor MUST have the same stick layout as the input tensor for all non-excluded dimensions
 
 ## LayerNorm and EXX2 Operations
 
@@ -78,14 +79,14 @@ All other precision formats follow BatchMatmul constraints.
 
 **Constraint:**
 
-- Stick should only have the normalization dimension in it
+- Stick SHOULD only have the normalization dimension in it
 
 ## Pooling Operations
 
 **Constraint:**
 
-- Window dimensions not allowed in the stick
-- Any number of other dimensions can be in the stick
+- Window dimensions MUST NOT be placed in the stick
+- Any number of other dimensions MAY be in the stick
 
 ## Quantization Operations
 
@@ -93,7 +94,7 @@ All other precision formats follow BatchMatmul constraints.
 
 **Input Constraints:**
 
-- Input must have only one dimension in stick:
+- Input MUST have only one dimension in stick:
   - SEN169_FP16: `[inpdim=64]`
   - FP32: `[inpdim=32]`
 
@@ -134,7 +135,7 @@ All other precision formats follow BatchMatmul constraints.
 
 **Constraint:**
 
-- Both input and output must have the same single dimension in stick
+- Both input and output MUST have the same single dimension in stick
 - For every stick of input, multiple sticks will be produced:
   - SEN169_FP16 to FP32: 2 output sticks per input stick
   - FP8 to SEN169_FP16: 2 output sticks per input stick
@@ -151,25 +152,25 @@ introduces into `backGapCore_`, see [Stick-Alignment Padding](stick-padding.md).
 
 **Constraints:**
 
-- Input stick must contain elements from exactly **one** dimension (`d1`).
-- Output stick must contain elements from exactly **one** dimension (`d2`).
-- `d1` and `d2` may be any primary dimensions — there is no restriction on which dimensions are chosen.
+- Input stick MUST contain elements from exactly **one** dimension (`d1`).
+- Output stick MUST contain elements from exactly **one** dimension (`d2`).
+- `d1` and `d2` MAY be any primary dimensions — there is no restriction on which dimensions are chosen.
 - Only SEN169_FP16 precision is supported.
 
 ---
 
 ## Core Work Division Constraints
 
-Any constituent dimension of an operation may be split across cores. The
-constraints below apply to the work assigned per core and must be satisfied
+Any constituent dimension of an operation MAY be split across cores. The
+constraints below apply to the work assigned per core and MUST be satisfied
 regardless of how the split is determined.
 
 ### Data Tensors
 
 | Constraint | Detail |
 |---|---|
-| **Stick-multiple alignment** | The per-core work extent in every dimension that is present in the stick must be a multiple of the stick size for that dimension. |
-| **DDR address span** | The contiguous range of device memory a single core addresses for any given tensor must not exceed **256 MB**. This is the per-core addressable range limit, separate from the 2 MB on-core LX scratchpad. |
+| **Stick-multiple alignment** | The per-core work extent in every dimension that is present in the stick MUST be a multiple of the stick size for that dimension. |
+| **DDR address span** | The contiguous range of device memory a single core addresses for any given tensor MUST NOT exceed **256 MB**. This is the per-core addressable range limit, separate from the 2 MB on-core LX scratchpad. |
 
 > **Note:** When tensors of different data types share a stick variable, the
 > stick-alignment check uses the largest `elems_per_stick` value across those
@@ -180,7 +181,7 @@ regardless of how the split is determined.
 
 The stick-multiple alignment constraint does **not** apply to index tensors
 used for indirect access. Instead, for each dimension present in the stick of
-an index tensor, the per-core work extent must satisfy one of the following:
+an index tensor, the per-core work extent MUST satisfy one of the following:
 
 - It spans an **integral number of sticks** — the extent is an exact multiple
   of the stick size for that dimension, or
@@ -188,15 +189,14 @@ an index tensor, the per-core work extent must satisfy one of the following:
   stick size for that dimension.
 
 A partial extent that covers more than one stick but is not a whole multiple of
-the stick size is not permitted.
+the stick size is NOT PERMITTED.
 
 ### Reduction Operations with Multiple Reduction Dimensions
 
 When an operation reduces across more than one dimension, **only one** of its
-reduction dimensions may be split across cores. There is no restriction on
+reduction dimensions MAY be split across cores. There is no restriction on
 operations that reduce along a single dimension.
 
 ---
 
-| [← Previous: Stick-Alignment Padding](stick-padding.md) | [↑ Table of Contents](README.md) | [Next: DesignSpaceConfig →](designspaceconfig.md) |
-|:--|:--:|--:|
+[↑ Spec Map](../../SuperDSC-Bundle.md#spec-map)|
