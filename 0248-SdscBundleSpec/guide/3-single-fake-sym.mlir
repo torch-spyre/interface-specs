@@ -2,8 +2,6 @@
 // SDSCs. They are used to specify start addresses for every core for each tensor.
 // These symbols are "fake" because they are constant in the mlir but they are still
 // passed to the sdsc as symbols for illustration.
-// NOTE: having actual symbols in mlir will be supported through the next revision of the spec
-
 module {
   func.func @single_fake_sym() {
     %inp_core0_start_address = arith.constant 1024 : index

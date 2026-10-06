@@ -301,9 +301,9 @@ module {
 Allocates a contiguous range of device memory for use within the bundle. This
 operation is intended for buffers that are neither kernel inputs nor outputs —
 intermediate tensors passed between consecutive SDSCs, and scratch space consumed
-internally by a single SDSC. The backend reserves the requested bytes before the
-first SDSC in the bundle executes and holds them for the entire kernel lifetime;
-there is no matching deallocate.
+internally by a single SDSC. The requested bytes are reserved before the first
+SDSC in the bundle executes and held for the entire kernel lifetime; there is no
+matching deallocate.
 
 The returned base address is a device byte address in the same address space as
 the start addresses used inside `sdsc.json`. It can therefore be passed directly
@@ -513,7 +513,7 @@ scf.for %iterator = %lower_bound to %upper_bound step %step {
 - Loop-carried variables are not supported. The induction variable MAY be used
   freely inside the loop body (e.g. as an operand to `affine.apply` or
   `arith.addi` to compute per-iteration addresses).
-- `sdscbundle.device_mem_allocate` SHOULD NOT appear inside the loop body; if it does, the backend still reserves only one buffer for the entire kernel, not one per iteration.
+- `sdscbundle.device_mem_allocate` SHOULD NOT appear inside the loop body. Only one buffer is reserved for the entire kernel, not one per iteration, regardless of loop placement.
 
 **Example:**
 

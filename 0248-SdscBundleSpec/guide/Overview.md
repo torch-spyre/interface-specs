@@ -62,8 +62,7 @@ The API consists of two primary components:
 All `sdsc_*.json` files MUST conform to the [SDSC Bundle JSON Schema](../spec/sdscbundle-schema.json).
 The schema provides machine-readable type constraints, required-field enforcement, and enum
 validation for every object in the hierarchy. It is the normative reference for structural
-correctness; semantic constraints (cross-field consistency) are described in the individual
-object pages linked from [SDSC JSON API](../spec/json/SDSC-json-api.md).
+correctness.
 
 ## Important Notes
 
@@ -80,6 +79,38 @@ DesignSpaceConfig can represent **BOTH** deep learning operators AND data-shuffl
 
 - Data in one core can be directly available for compute in another core
 - The backend compiler will ensure proper data movement across cores
+
+---
+
+## Examples
+
+### Simple MLIR Examples
+
+Minimal `.mlir` files illustrating the core bundle patterns in isolation.
+
+| File | Description |
+|---|---|
+| [`1-single-no-sym.mlir`](1-single-no-sym.mlir) | Single SDSC with no symbols — all start addresses, work division, and sizes are encoded directly in the JSON file. The bundle only invokes `sdsc_execute` with no arguments. |
+| [`2-softmax-no-sym.mlir`](2-softmax-no-sym.mlir) | Series of six SDSCs without symbols, implementing softmax (max → sub → exp → sum → reciprocal → mul). Shapes and addresses are fixed in each JSON file. |
+| [`3-single-fake-sym.mlir`](3-single-fake-sym.mlir) | Single SDSC where four constant start addresses are passed as symbols (`symbol_ids=[-1, -2, -3, -4]`). Illustrates symbolic address passing even when values are compile-time constants. |
+| [`4-loop-multi.mlir`](4-loop-multi.mlir) | Two SDSCs inside a `scf.for` loop. Per-core start addresses are computed each iteration using `affine.apply` maps, with per-core tensor splits driving separate symbol values per core. |
+
+### MLIR Examples
+
+[`MLIR-examples.md`](MLIR-examples.md) — Annotated usage examples covering the common bundle patterns:
+
+- Single operation with no dynamic symbols
+- Multi-operation sequence (e.g. softmax decomposition)
+- Symbolic start addresses passed from the bundle to an SDSC
+- Tiled loop with affine address arithmetic
+
+### MLIR Complete Example
+
+[`MLIR-complete-example.md`](MLIR-complete-example.md) — End-to-end walkthrough of a softmax bundle (`softmax.mlir`) with dynamic `input_arg` tensor parameters, per-core affine address computation, and fully annotated symbolic bindings.
+
+### JSON Examples
+
+[`JSON-examples.md`](JSON-examples.md) — Complete JSON examples for SDSC files, including a fully worked simple GELU operation showing all required and optional fields across `SuperDsc`, `DesignSpaceConfig`, `scheduleTree_`, `labeledDs_`, and `computeOp_`.
 
 ---
 
