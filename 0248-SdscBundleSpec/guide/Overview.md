@@ -45,12 +45,7 @@ This abstraction enables frontend compilers to express:
 - Tensor placement in DDR memory or LX scratchpad
 - Static or symbolic shapes and start addresses
 
-The SuperDSC-Bundle output is used by the Deeptools backend compiler to produce the `SpyreCode`
-consumed by the Spyre Card. The `SpyreCode` contains the job binary, a job plan and other
-compiled artifacts. In the case where either the start-address and/or shapes are symbolic,
-`SpyreCode` allows for the program binary to contain variables that need to be substituted
-or corrected before execution. The mechanism to perform program correction just-in-time before
-the job is launched onto spyre is also produced by the backend compiler as part of `SpyreCode`.
+The SuperDSC-Bundle output is consumed by Deeptools to produce `SpyreCode`. For a full description of `SpyreCode` and its symbolic correction mechanism, see [Execution Model](../SuperDSC-Bundle.md#execution-model).
 
 ## API Components
 
@@ -66,19 +61,7 @@ correctness.
 
 ## Important Notes
 
-### Data Shuffle Operations Support
-
-DesignSpaceConfig can represent **BOTH** deep learning operators AND data-shuffle operations:
-
-- **Deep learning operators**: Matmul, convolution, activations, reductions, etc.
-- **Data-shuffle operations**: Stick-breaking, non-stick breaking, gather, scatter
-
-### Tensor Allocation vs Work Division
-
-**Critical:** Tensor allocation need NOT be compatible with compute work division. This means:
-
-- Data in one core can be directly available for compute in another core
-- The backend compiler will ensure proper data movement across cores
+For supported operation categories (including data-shuffle operations such as stick-breaking, gather, and scatter) and tensor allocation rules, see the [API Components note](../SuperDSC-Bundle.md#api-components) in the spec, [ComputeOperation](../spec/json/computeoperation.md), and [Stick Layout Constraints](../spec/json/stick-layout-constraints.md).
 
 ---
 

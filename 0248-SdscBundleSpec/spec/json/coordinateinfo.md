@@ -28,7 +28,7 @@ All five fields are required. No additional properties are allowed.
 
 | Field | Type | Required | Constraints | Description |
 |---|---|---|---|---|
-| `spatial` | integer | Yes | `3` or `0` | `3` = dimension is partitioned across cores; `0` = dimension is collapsed / not partitioned. The frontend always emits one of these two values; intermediate values are not used. |
+| `spatial` | integer | Yes | `3` | The frontend always emits `3`: the dimension is partitioned across cores. |
 | `temporal` | integer | Yes | `0` | Always set to `0` by the frontend. |
 | `elemArr` | integer | Yes | >= 0 | Element array level: `1` for non-stick dimensions, `2` for stick dimensions, or `0` when collapsed. Encodes whether this dimension maps to the innermost leaf elements or multiple sticks per slice. |
 | `padding` | string | Yes | `"nopad"`, `"lowered_padded"`, `"padded_nozeropad"`, `"padded_wzeropad"`, `"padded_fullspan"`, or `"padded_fullspan_wunneeded"` | Padding state for this dimension in the allocated buffer. `"nopad"` = no padding; `"lowered_padded"` = padding collapsed into a lowered layout; `"padded_nozeropad"` = padded but region is not zeroed (used with conv2d when padding is non-zero); `"padded_wzeropad"` = padded and region is zero-filled; `"padded_fullspan"` = full-span padding; `"padded_fullspan_wunneeded"` = full-span padding with unneeded pad elements (used with conv2d when padding is zero). |
@@ -41,9 +41,9 @@ A `CoordinateInfo` object for dimension `"mb"` as it appears inside `coordInfo`:
 ```json
 "coordInfo": {
   "mb": {
-    "spatial":  0,
+    "spatial":  3,
     "temporal": 0,
-    "elemArr":  0,
+    "elemArr":  1,
     "padding":  "nopad",
     "folds": {
       "dim_prop_func": [{"Const": {}}],
@@ -56,12 +56,10 @@ A `CoordinateInfo` object for dimension `"mb"` as it appears inside `coordInfo`:
 }
 ```
 
-In this example, `"mb"` is at spatial level 0, temporal level 0, element-array level 0 — all
-collapsed to a single level. This is a simplified illustration; in a fully tiled DSC the same
-dimension would typically have `spatial: 3` (core, corelet, row split levels) and `elemArr: 1`
-(non-stick) or `2` (stick), as shown in the [`ScheduleTreeNode`](scheduletreenode.md) worked
-examples. Use `spatial: 0` / `elemArr: 0` only when the dimension is not partitioned across
-the spatial hierarchy.
+In this example, `"mb"` is partitioned across the spatial hierarchy (`spatial: 3`, covering the
+core, corelet, and row-split levels), has no temporal partitioning (`temporal: 0`), and maps to
+non-stick elements (`elemArr: 1`). See the [`ScheduleTreeNode`](scheduletreenode.md) worked
+examples for further detail.
 
 ---
 

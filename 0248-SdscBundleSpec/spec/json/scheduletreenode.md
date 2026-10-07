@@ -138,30 +138,9 @@ tensor dimension. Each entry describes how that dimension is progressively split
 across cores, corelets, rows, and the final leaf entities via its `folds`
 [`FoldManager`](foldmanager.md).
 
-### CoordinateInfo fields
-
-| Field | Values | Description |
-|---|---|---|
-| `spatial` | `3` or `0` | `3` = dimension is partitioned across cores; `0` = dimension is collapsed / not partitioned. The frontend always emits one of these two values; intermediate values are not used. |
-| `temporal` | `0` | Set to `0` by the frontend. |
-| `elemArr` | `1` for non-stick dimensions; `2` for stick dimensions; `0` when collapsed | Encodes whether this dimension maps to leaf elements or multiple sticks per slice. Use `0` when the dimension is collapsed (matches `spatial: 0`). |
-| `padding` | `"nopad"`, `"lowered_padded"`, `"padded_nozeropad"`, `"padded_wzeropad"`, `"padded_fullspan"`, or `"padded_fullspan_wunneeded"` | Padding state for this dimension. `"nopad"` is the common case; see [CoordinateInfo](coordinateinfo.md) for the full enum and [Padding](padding.md) for semantics. |
-| `folds` | [FoldManager](foldmanager.md) | Encodes the dimension split hierarchy. |
-
-### folds hierarchy
-
-The `dim_prop_attr` labels in `coordinates_.coordInfo.<dim>.folds` follow a
-fixed split hierarchy:
-
-| Label | Level |
-|---|---|
-| `core_fold` | Split across cores |
-| `corelet_fold` | Split across corelets within a core |
-| `row_fold` | Split across rows within a corelet |
-| `elem_arr_0` | Element count in the innermost (leaf) slice |
-| `elem_arr_1` | Number of sticks per slice (stick dimensions only) |
-
-The general structure is:
+See [CoordinateInfo](coordinateinfo.md) for the full field reference and
+[FoldProperty](foldproperty.md#folds-hierarchy) for the `dim_prop_attr` label
+hierarchy. The general `folds` structure for a partitioned dimension is:
 
 ```json
 "coordinates_": {
@@ -309,9 +288,9 @@ tensor in LX scratchpad with tiling coordinates.
     "coordinates_": {
       "coordInfo": {
         "mb": {
-          "spatial":  0,
+          "spatial":  3,
           "temporal": 0,
-          "elemArr":  0,
+          "elemArr":  1,
           "padding":  "nopad",
           "folds": {
             "dim_prop_func": [{"Const": {}}],

@@ -618,8 +618,8 @@
       "properties": {
         "spatial": {
           "type": "integer",
-          "description": "Spatial level",
-          "minimum": 0
+          "description": "Spatial level. The frontend always emits 3 (dimension is partitioned across cores).",
+          "const": 3
         },
         "temporal": {
           "type": "integer",

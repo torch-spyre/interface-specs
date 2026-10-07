@@ -92,11 +92,11 @@ A user-written PyTorch program is compiled by torch-spyre to generate a set of f
   Figure 2. Hardware abstraction of multi-core accelerator embodied in `SuperDSC-Bundle`
 </p>
 
-When dimension sizes or tensor start addresses are symbolic, `SpyreCode` carries program-correction tables that are resolved just-in-time before the job is launched on Spyre.
+The SuperDSC-Bundle output is consumed by the Deeptools backend compiler to produce `SpyreCode`. `SpyreCode` contains the job binary, a job plan, and other compiled artifacts. When start addresses and/or dimension sizes are symbolic, `SpyreCode` carries program-correction tables — variables embedded in the program binary that are substituted or corrected just-in-time before the job is launched on Spyre. The backend compiler produces this correction mechanism as part of `SpyreCode`.
 
 > **Notes**
 > - The Frontend/Backend compiler interface will transition to a new interface called Kernel Tile Intermediate Representation (KTIR) in the future (https://github.com/torch-spyre/rfcs/blob/main/0682-KtirSpec/0682-KtirSpecRFC.md)
-> - `SuperDSC` (without bundle capability) is the current interface between Deeptools frontend compiler and Deeptools backend compiler
+> - `SuperDSC` (without bundle capability) is the current interface between torch-spyre frontend compiler and Deeptools backend compiler
 > - `SpyreCode` is tracked through: https://github.com/torch-spyre/torch-spyre/issues/277
 
 ## Structure of SuperDSC-Bundle
@@ -212,19 +212,11 @@ The table below lists all available examples in recommended reading order.
 
 Quick reference to every document in this specification, grouped by role.
 
-### Guide
-
-| Document | Description |
-|----------|-------------|
-| [Overview](guide/Overview.md) | Spyre stack overview and the two API components |
-
 ### MLIR Dialect — `sdscbundle`
 
 | Document | Description |
 |----------|-------------|
 | [MLIR Bundle API](spec/dialect/MLIR-bundle-API.md) | Dialect operations, bundle container, symbolic values |
-| [MLIR Examples](guide/MLIR-examples.md) | Annotated MLIR bundle examples |
-| [MLIR Complete Example](guide/MLIR-complete-example.md) | Full end-to-end MLIR bundle |
 
 ### JSON Layer
 
@@ -256,15 +248,18 @@ Quick reference to every document in this specification, grouped by role.
 | ComputeOperation | [computeoperation.md](spec/json/computeoperation.md) |
 | ConstantInfo | [constantinfo.md](spec/json/constantinfo.md) |
 
-### Worked Examples
-
-| Document | Description |
-|----------|-------------|
-| [JSON Examples](guide/JSON-examples.md) | Complete and indirect-access JSON examples |
-
 ### References
 
 | Document | Description |
 |----------|-------------|
 | [References](spec/reference.md) | External specs and normative references |
+
+### Guide & Examples (non-normative)
+
+| Document | Description |
+|----------|-------------|
+| [Overview](guide/Overview.md) | Spyre stack overview and the two API components |
+| [MLIR Examples](guide/MLIR-examples.md) | Annotated MLIR bundle examples |
+| [MLIR Complete Example](guide/MLIR-complete-example.md) | Full end-to-end MLIR bundle |
+| [JSON Examples](guide/JSON-examples.md) | Complete and indirect-access JSON examples |
 
