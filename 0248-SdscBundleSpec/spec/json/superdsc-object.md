@@ -78,7 +78,9 @@ Six fields are required. No additional properties are allowed.
 fields. The serialized key in the JSON bundle is `coreIdToDscSchedule` (no underscore) — this
 inconsistency is a known anomaly. Do not add a trailing underscore when writing bundle JSON.
 
-**† `debug_handle_` presence convention:** The field is optional per the schema — the key may be omitted entirely when provenance is unavailable. However, the torch-spyre frontend always emits the key, setting it to `null` when no provenance information exists rather than omitting it. Consumers MUST therefore tolerate both a missing key and an explicit `null` value.
+**† `debug_handle_` presence convention:** `debug_handle_` is optional. When
+provenance information is unavailable, producers MAY either omit the field or
+set its value to `null`.
 
 ## Example
 

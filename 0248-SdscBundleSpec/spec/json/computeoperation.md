@@ -36,7 +36,7 @@ function name, optional attributes, and the input/output tensors from
 
 ## Fields
 
-All four required fields must be present. No additional properties are allowed.
+All four required fields MUST be present. No additional properties are allowed.
 
 | Field | Type | Required | Constraints | Description |
 |---|---|---|---|---|
@@ -87,7 +87,7 @@ Tensor names follow the `"<dsName_>-idx<ldsIdx_>"` convention.
 
 ## Supported Operations
 
-The `opFuncName` value must be one of the strings in the table below.
+The `opFuncName` value MUST be one of the strings in the table below.
 
 | Category | OpFunc enum | OpFunc string | Precision | Constants | Notes |
 |---|---|---|---|---|---|

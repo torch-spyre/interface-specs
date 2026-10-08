@@ -44,7 +44,7 @@ All five required fields MUST be present. No additional properties are allowed.
 |---|---|---|---|---|
 | `ldsIdx_` | integer | Yes | >= 0 | Zero-based index into the parent `labeledDs_` array. Referenced by `ScheduleTreeNode.ldsIdx_` and used to form the compute-op tensor name suffix `-idx<N>`. |
 | `dsName_` | string | Yes | — | Unique tensor name within the DSC. Compute operations reference this tensor as `"<dsName_>-idx<ldsIdx_>"` (e.g. `"convolution-Tensor0-idx0"`). |
-| `dsType_` | string enum | Yes | `"INPUT"` `"OUTPUT"` `"KERNEL"` `"KERNEL_IDX"` | Tensor role. Must match a type defined in `primaryDsInfo_` of the parent DSC. Sourced from torch_spyre `LAYOUT_INPUT_LABELS` / `LAYOUT_OUTPUT_LABELS`. |
+| `dsType_` | string enum | Yes | `"INPUT"` `"OUTPUT"` `"KERNEL"` `"KERNEL_IDX"` | Tensor role. MUST match a type defined in `primaryDsInfo_` of the parent DSC. Sourced from torch_spyre `LAYOUT_INPUT_LABELS` / `LAYOUT_OUTPUT_LABELS`. |
 | `scale_` | array of number | No | One entry per dimension in `dsType_` order | Per-dimension scale factors in `layoutDimOrder_` order. `1` = normal size; `-1` = reduced / broadcast; `-2` = reduced / broadcast stick dimension. |
 | `wordLength` | number | No | > 0 (exclusive) | Element size in bytes. Integer for full-byte formats (e.g. `2` for FP16); fractional for sub-byte formats (e.g. `0.5` for 4-bit types such as `SENINT4` and `SEN121_FP4`). **Note:** field name lacks the trailing underscore used by all other fields — see [note](#note-on-wordlength-naming). |
 | `dataFormat_` | string enum | Yes | see [Data Formats](#data-formats) | Numeric format of each tensor element. `SEN169_FP16` is the most common Spyre format. |

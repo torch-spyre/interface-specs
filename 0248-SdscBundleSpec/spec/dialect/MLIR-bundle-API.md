@@ -31,7 +31,7 @@ Each parameter is one of:
 |---|---|
 | *(none)* | No parameters — all symbol values (addresses and sizes) are embedded as `arith.constant` values inside the function body. |
 | `index` | A resolved symbol value (base address or dimension size) passed directly as a constant index value. |
-| `!sdscbundle.input_arg<index>` | A runtime-provided symbol value (base address or dimension size). MAY carry OPTIONAL `granularity=N` and/or `max_value=N` annotations for symbolic dimension parameters. MUST be extracted with `sdscbundle.input_arg_extract` before use. |
+| `!sdscbundle.input_arg<index>` | A runtime-provided symbol value (base address or dimension size). MAY carry `granularity=N` and/or `max_value=N` annotations for symbolic dimension parameters. MUST be extracted with `sdscbundle.input_arg_extract` before use. |
 
 **Attributes:**
 
@@ -42,7 +42,7 @@ Each parameter is one of:
 **Constraints:**
 
 - Exactly one `func.func` per `module`.
-- All `sdscbundle.device_mem_allocate` calls SHOULD appear in the entry block of
+- All `sdscbundle.device_mem_allocate` calls MUST appear in the entry block of
   `func.func`, outside any `scf.for` loop.
 - Parameters of type `!sdscbundle.input_arg<index>` MUST be extracted with
   `sdscbundle.input_arg_extract` before their value is used in any arithmetic or
@@ -330,16 +330,18 @@ byte of the allocated buffer. Contents are undefined at allocation.
 
 **Constraints:**
 
-- SHOULD appear in the entry block of the bundle function, outside any `scf.for`
-  loop. An allocation written inside a loop still reserves one single buffer,
-  not one buffer per iteration.
+- MUST appear in the entry block of the bundle function, outside any `scf.for`
+  loop. Placing it inside a loop is a correctness trap: the backend reserves one
+  buffer for the entire kernel regardless of loop placement, not one per iteration.
 - Each call allocates its own non-overlapping range. The total device memory
   required by a bundle is the sum of all its `device_mem_allocate` requests, and
   that sum MUST remain within the ~15 GB budget.
 - A frontend that needs to reuse space across tensors with non-overlapping live
   ranges SHOULD issue a single large `device_mem_allocate` and sub-allocate it
-  manually using `arith.addi` offsets. The frontend is responsible for ensuring
-  non-overlapping, correctly aligned sub-ranges.
+  manually using `arith.addi` offsets. When doing so, the frontend MUST ensure
+  that sub-ranges whose live ranges overlap are assigned disjoint offset intervals,
+  and MUST satisfy the alignment requirement for each sub-range by its choice of
+  offset.
 
 **Examples:**
 
@@ -418,9 +420,8 @@ operand to `sdscbundle.sdsc_execute`.
   `!sdscbundle.input_arg<index>`; it cannot be the result of another operation.
 - MUST appear in the entry block of the bundle function, before any use of the
   extracted value.
-- `granularity` and `max_value` MAY only be extracted when the type annotation
-  on the parameter declares the corresponding attribute; extracting an absent
-  field is invalid.
+- `granularity` and `max_value` MUST NOT be extracted unless the type annotation
+  on the parameter declares the corresponding attribute.
 
 **Example — value (base address):**
 
@@ -510,10 +511,10 @@ scf.for %iterator = %lower_bound to %upper_bound step %step {
 - The lower bound, upper bound, and step of every `scf.for` loop MUST all be
   resolvable to compile-time constants (via constant folding). No symbolic or
   runtime loop bounds are supported in any loop kind, including parametric loops.
-- Loop-carried variables are not supported. The induction variable MAY be used
-  freely inside the loop body (e.g. as an operand to `affine.apply` or
-  `arith.addi` to compute per-iteration addresses).
-- `sdscbundle.device_mem_allocate` SHOULD NOT appear inside the loop body. Only one buffer is reserved for the entire kernel, not one per iteration, regardless of loop placement.
+- Loop-carried variables are not supported. The induction variable is available
+  throughout the loop body and is typically used as an operand to `affine.apply`
+  or `arith.addi` to compute per-iteration addresses.
+- `sdscbundle.device_mem_allocate` MUST NOT appear inside the loop body. The backend reserves one buffer for the entire kernel regardless of loop placement; placing it inside a loop silently produces one buffer instead of one per iteration.
 
 **Example:**
 
@@ -720,7 +721,7 @@ errors before the bundle is processed:
 - `sdscbundle.device_mem_allocate`: `size` MUST be a positive integer.
 - `sdscbundle.input_arg_extract`: the source operand MUST be a
   `func.func` block argument of type `!sdscbundle.input_arg<index>`.
-  Extracting `granularity` or `max_value` is only valid when those
+  `granularity` and `max_value` MUST NOT be extracted unless those
   annotations are declared on the parameter type.
 - `func.func` parameters MUST be of type `index` or
   `!sdscbundle.input_arg<index>`.

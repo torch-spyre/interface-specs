@@ -113,7 +113,7 @@ See [`sdscbundle.input_arg_extract`](../dialect/MLIR-bundle-API.md#sdscbundleinp
 ### Example
 
 A symbolic `mb_` dimension with a maximum of 32 and a granularity of 1
-(runtime value must be a positive integer ≤ 32):
+(runtime value MUST be a positive integer ≤ 32):
 
 ```json
 "symbolicDimInfo_": {

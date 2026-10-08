@@ -48,7 +48,7 @@ practice, see [ScheduleTreeNode](scheduletreenode.md).
 
 ## Fields
 
-`dim_prop_func` and `dim_prop_attr` are required and must have the same
+`dim_prop_func` and `dim_prop_attr` are required and MUST have the same
 length — one entry per fold dimension. No additional properties are allowed.
 
 | Field | Type | Required | Constraints | Description |

@@ -139,7 +139,7 @@ Each parameter is one of:
 |---|---|
 | *(none)* | No parameters — all symbol values are embedded as `arith.constant` values inside the function body. |
 | `index` | A resolved symbol value passed directly as a constant index. |
-| `!sdscbundle.input_arg<index>` | A runtime-provided symbol value. MAY carry OPTIONAL `granularity=N` and/or `max_value=N` annotations. MUST be extracted with `sdscbundle.input_arg_extract` before use. |
+| `!sdscbundle.input_arg<index>` | A runtime-provided symbol value. MAY carry `granularity=N` and/or `max_value=N` annotations. MUST be extracted with `sdscbundle.input_arg_extract` before use. |
 
 #### Symbolic Values and Addresses
 
@@ -171,40 +171,13 @@ For the full list of supported `opFuncName` values, see [ComputeOperation — Su
 
 Each operation category imposes constraints on stick composition, restricting which dimensions can be present in the stick. Tensors MUST be padded to meet these constraints. There are no constraints on tensor layout beyond the stick.
 
-**Important:** Stick constraints can cause a ripple effect — a tensor MAY need padding even in its non-stick dimension if that dimension appears in the stick of another tensor feeding the same operation. This ensures dimension span consistency across all tensors.
+**Important:** Stick constraints can cause a ripple effect — a tensor MUST be padded even in its non-stick dimension if that dimension appears in the stick of another tensor feeding the same operation. This ensures dimension span consistency across all tensors.
 
 For per-category stick layouts and padding rules see [Stick Layout Constraints](spec/json/stick-layout-constraints.md).
 
 ### Core Work Division Constraints
 
 For per-core work extent rules (stick-multiple alignment, DDR address span, index tensors, and multi-dimension reduction splits) see [Stick Layout Constraints — Core Work Division](spec/json/stick-layout-constraints.md#core-work-division-constraints).
-
-## Examples
-
-The table below lists all available examples in recommended reading order.
-
-### MLIR Bundle Examples
-
-| # | Description | File |
-|---|---|---|
-| 1 | Single operation (no symbols) | [MLIR-examples.md — Single Operation](guide/MLIR-examples.md#single-operation-no-symbols) |
-| 2 | Sequential operations — kernel fusion (softmax) | [MLIR-examples.md — Sequential Operations](guide/MLIR-examples.md#sequential-operations-kernel-fusion) |
-| 3 | Symbolic address — runtime-provided base address | [MLIR-examples.md — Symbolic Address](guide/MLIR-examples.md#symbolic-address--runtime-provided-base-address) |
-| 4 | Symbolic address — per-core addresses from a runtime base | [MLIR-examples.md — Per-Core Addresses](guide/MLIR-examples.md#symbolic-address--per-core-addresses-from-a-runtime-base) |
-| 5 | Symbolic dimension size — single symbolic batch dimension | [MLIR-examples.md — Symbolic Dimension](guide/MLIR-examples.md#symbolic-dimension-size--single-symbolic-batch-dimension) |
-| 6 | Symbolic dimension size — split across cores | [MLIR-examples.md — Symbolic Dimension Split](guide/MLIR-examples.md#symbolic-dimension-size--symbolic-dimension-split-across-cores) |
-| 7 | Loop with dynamic addresses (`scf.for` + `affine.apply`) | [MLIR-examples.md — Loop](guide/MLIR-examples.md#loop-with-dynamic-addresses) |
-| 8 | Multi-core with per-core addresses | [MLIR-examples.md — Multi-Core](guide/MLIR-examples.md#multi-core-with-per-core-addresses) |
-| 9 | Device memory allocation — intermediate buffer | [MLIR-examples.md — Intermediate Buffer](guide/MLIR-examples.md#simple-intermediate-buffer) |
-| 10 | Device memory allocation — pool sub-allocation | [MLIR-examples.md — Pool Sub-Allocation](guide/MLIR-examples.md#pool-sub-allocation) |
-| 11 | Complete MLIR example — softmax with dynamic shapes | [MLIR-complete-example.md](guide/MLIR-complete-example.md) |
-
-### JSON Examples
-
-| # | Description | File |
-|---|---|---|
-| 12 | Complete JSON example — simple GELU operation | [JSON-examples.md — Complete Example](guide/JSON-examples.md#complete-example--simple-gelu-operation) |
-| 13 | Indirect access — Top-K gather operation | [JSON-examples.md — Indirect Access](guide/JSON-examples.md#indirect-access-example--top-k-gather-operation) |
 
 ---
 

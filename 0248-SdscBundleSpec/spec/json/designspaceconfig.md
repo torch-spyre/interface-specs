@@ -49,9 +49,9 @@ Six fields are required. No additional properties are allowed.
 
 | Field | Type | Required | Constraints | Description |
 |---|---|---|---|---|
-| `numCoresUsed_` | integer | Yes | >= 1 | Number of Spyre cores used by this DSC. Must match the length of `coreIdsUsed_`. |
+| `numCoresUsed_` | integer | Yes | >= 1 | Number of Spyre cores used by this DSC. MUST match the length of `coreIdsUsed_`. |
 | `numCoreletsUsed_` | integer | No | >= 1 | Number of corelets used. |
-| `coreIdsUsed_` | array of integer | Yes | Each >= 0 | IDs of the cores that execute this DSC. Length must equal `numCoresUsed_`. |
+| `coreIdsUsed_` | array of integer | Yes | Each >= 0 | IDs of the cores that execute this DSC. Length MUST equal `numCoresUsed_`. |
 | `N_` | [DataStructDims](datastructdims.md) | Yes | — | Total (un-tiled) tensor dimensions for this operation. |
 | `dimToSymbolMapping_` | map&lt;string, array&lt;string&gt;&gt; | No | Keys: dim names | Mapping from dimension names to symbolic variable names for symbolic dimension support. |
 | `coordinateMasking_` | object | No | — | Coordinate masking configuration for masked operations. |
@@ -64,7 +64,7 @@ Six fields are required. No additional properties are allowed.
 | `constantInfo_` | map&lt;string, [ConstantInfo](constantinfo.md)&gt; or `"{}"` | No | Keys: `^[0-9]+$` | Named constants used by the operation. Set to the string `"{}"` when no constants are needed. |
 | `computeOp_` | array of [ComputeOperation](computeoperation.md) | Yes | — | Compute operations to execute. More than one entry when operations are fused. |
 
-**\* Conditionally expected:** `dataStageParam_` and `primaryDsInfo_` are optional per the JSON schema but are expected to be present for all compute operations. They may be omitted only for data-shuffle operations (e.g. `ReStickifyOpHBM`) where staging and layout info are not applicable.
+**\* Conditionally expected:** `dataStageParam_` and `primaryDsInfo_` are optional per the JSON schema but are expected to be present for all compute operations. They MAY be omitted only for data-shuffle operations (e.g. `ReStickifyOpHBM`) where staging and layout info are not applicable.
 
 ## Example
 

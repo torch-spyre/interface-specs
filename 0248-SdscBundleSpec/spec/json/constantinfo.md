@@ -40,7 +40,7 @@ All three fields are required. No additional properties are allowed.
 | Field | Type | Required | Constraints | Description |
 |---|---|---|---|---|
 | `name_` | string | Yes | — | Unique name for this constant within the DSC (e.g. `"scaling_factor"`, `"eps"`). Referenced by `opFuncName` operations that consume it, such as `"mean"` or `"layernormscale"`. |
-| `dataFormat_` | string enum | Yes | see [Data Formats](#data-formats) | Numeric format of the constant's elements. Must match the data format of the tensors the constant is applied to. |
+| `dataFormat_` | string enum | Yes | see [Data Formats](#data-formats) | Numeric format of the constant's elements. MUST match the data format of the tensors the constant is applied to. |
 | `data_` | [FoldManager](foldmanager.md) | Yes | — | The constant value(s), encoded as a fold structure so different values can be assigned per-core or per-time-step. |
 
 ## Data Formats
