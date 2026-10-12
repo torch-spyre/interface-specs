@@ -74,7 +74,7 @@ A minimal 2-core GELU DSC showing required fields only:
 {
   "gelu": {
     "numCoresUsed_": 2,
-    "numCoreletsUsed_": 2,
+    "numCoreletsUsed_": 1,
     "coreIdsUsed_": [0, 1],
     "N_": {"mb_": 32, "in_": 128},
     "labeledDs_": [

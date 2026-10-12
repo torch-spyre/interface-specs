@@ -269,7 +269,7 @@ tensor in LX scratchpad with tiling coordinates.
       "dim_prop_func": [{"Map": {}}, {"Const": {}}],
       "dim_prop_attr": [
         {"factor_": 2, "label_": "core"},
-        {"factor_": 2, "label_": "corelet"}
+        {"factor_": 1, "label_": "corelet"}
       ],
       "data_": {
         "[0, 0]": "0",

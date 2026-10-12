@@ -98,8 +98,8 @@ a value inside `DataStructDims.symbolicDimInfo_`, keyed by dimension name
 
 | JSON field | Type | Required | Constraints | Description |
 |---|---|---|---|---|
-| `maxSize_` | integer | Yes | >= 1 | Upper bound the backend MUST plan memory for. The runtime value supplied at job launch MUST NOT exceed this. Corresponds to the `max_value` annotation on `!sdscbundle.input_arg<index, max_value=N>` in the MLIR bundle. |
-| `granularity_` | integer | Yes | >= 1 | Step size the runtime value MUST be a multiple of. For a dimension split across N cores, `granularity_` MUST be a multiple of N. Corresponds to the `granularity` annotation on `!sdscbundle.input_arg<index, granularity=N>` in the MLIR bundle. |
+| `maxSize_` | integer | Yes | >= 1 | Upper bound on the size of this dimension; the runtime value supplied at job launch does not exceed it. Corresponds to the `max_value` annotation on `!sdscbundle.input_arg<index, max_value=N>` in the MLIR bundle. |
+| `granularity_` | integer | Yes | >= 1 | Step size; the runtime value is a multiple of it. For a dimension split across N cores, `granularity_` MUST be a multiple of N. Corresponds to the `granularity` annotation on `!sdscbundle.input_arg<index, granularity=N>` in the MLIR bundle. |
 
 ### JSON ↔ MLIR name mapping
 
@@ -113,7 +113,7 @@ See [`sdscbundle.input_arg_extract`](../dialect/MLIR-bundle-API.md#sdscbundleinp
 ### Example
 
 A symbolic `mb_` dimension with a maximum of 32 and a granularity of 1
-(runtime value MUST be a positive integer ≤ 32):
+(the runtime value is a positive integer ≤ 32):
 
 ```json
 "symbolicDimInfo_": {

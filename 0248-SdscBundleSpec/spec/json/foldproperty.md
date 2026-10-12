@@ -61,11 +61,11 @@ The `dim_prop_attr` labels in coordinate folds (such as `coordinates_.coordInfo.
 
 ## Example
 
-The two required `SuperDsc` fold properties for a 2-core, 2-corelet bundle:
+The two required `SuperDsc` fold properties for a 2-core bundle (corelet splitting is left to DeepTools, so the corelet factor is `1`):
 
 ```json
 "coreFoldProp_":    {"factor_": 2, "label_": "core"},
-"coreletFoldProp_": {"factor_": 2, "label_": "corelet"}
+"coreletFoldProp_": {"factor_": 1, "label_": "corelet"}
 ```
 
 `factor_: 2` at the core level means each tensor dimension assigned to this

@@ -64,7 +64,7 @@ core index 0, time-step index 0.
       "dim_prop_func": [{"Const": {}}, {"Const": {}}],
       "dim_prop_attr": [
         {"factor_": 2, "label_": "core"},
-        {"factor_": 2, "label_": "corelet"}
+        {"factor_": 1, "label_": "corelet"}
       ],
       "data_": {
         "[0, 0]": [15872]

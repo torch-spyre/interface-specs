@@ -2,260 +2,244 @@
 
 ## Introduction
 
-Each `sdsc_*.json` file in a SuperDSC-Bundle describes a single torch operation to be executed on the Spyre card. One JSON file encodes everything the hardware needs to execute that operation deterministically across 1 or multiple cores: how the iteration space is divided, how tensors are laid out in memory, where data lives (HBM vs. LX scratchpad), and what compute to perform.
+Each `sdsc_*.json` file in a SuperDSC-Bundle describes a single torch operation to be executed on the Spyre card. One JSON file encodes everything the hardware needs to execute that operation deterministically across one or multiple cores: how the iteration space is divided, how tensors are laid out in memory, where data lives (HBM vs. LX scratchpad), and what compute to perform.
 
-A PyTorch model may translate into several SuperDSC-Bundles. Each bundle is composed of a `bundle.mlir` file (which orchestrates execution flow and symbol management — see [MLIR Bundle API](../dialect/MLIR-bundle-API.md)) and one or more `sdsc_*.json` files. Each JSON file corresponds to one torch operation.
+A PyTorch model may translate into several SuperDSC-Bundles. Each bundle is composed of a `bundle.mlir` file (which orchestrates execution flow and symbol management — see [MLIR Bundle API](../dialect/MLIR-bundle-API.md)) and one or more `sdsc_*.json` files.
 
-The different sections of an SDSC JSON file describe the following:
-
-- **Core fold properties** — how the iteration space is divided across cores
-- **Tensor descriptors** — layout, memory residency, data format, and stick configuration for each tensor
-- **Schedule tree** — per-tensor memory allocation, start addresses, and coordinate mappings
-- **Data staging** — per-core tile sizes for steady-state and epilogue passes
-- **Compute operations** — execution unit, operation name, and input/output tensor references
-
-All `sdsc_*.json` files in a SuperDSC-Bundle MUST conform to [`sdscbundle-schema.json`](../sdscbundle-schema.json),
-the machine-readable contract written against [JSON Schema draft 2020-12](https://json-schema.org/draft/2020-12).
+All `sdsc_*.json` files in a SuperDSC-Bundle MUST conform to [`sdscbundle-schema.json`](../sdscbundle-schema.json), the machine-readable contract written against [JSON Schema draft 2020-12](https://json-schema.org/draft/2020-12).
 
 The schema enforces:
 
 - Required fields and their types at every level of the object hierarchy
-- Enum values for `dsType_`, `component_`, `indirectAllocType_`, `indexTensorType_`,
-  `dataFormat_`, `fidelity_`, `nodeType_`, and all other constrained string fields
+- Enum values for `dsType_`, `component_`, `indirectAllocType_`, `indexTensorType_`, `dataFormat_`, `fidelity_`, `nodeType_`, and all other constrained string fields
 - Pattern constraints on dynamic keys such as core IDs and operation-name root keys
 - Structural rules such as `additionalProperties: false` on all defined objects
 
-## Key Components
+For a step-by-step procedural guide to populating these fields, see [Filling a JSON File — Step-by-Step](../../guide/Overview.md#filling-a-json-file--step-by-step) in the Overview guide.
 
-An SDSC JSON file is structured as a single top-level key (the operation name) whose value is a **SuperDSC** object. The SuperDSC object holds a few top-level fields and a `dscs_[]` array of **DesignSpaceConfig** entries. Each `dscs_[]` entry is itself a single-key object wrapping a `DesignSpaceConfig` — some of its fields are leaf values while others are composite objects that drill down further into the object hierarchy.
+---
+
+## Object Hierarchy & Structural Overview
+
+An SDSC JSON file is structured as a single top-level key (the dynamic operation name) whose value is a **SuperDSC** object. The SuperDSC object defines bundle-level work division, folding, and schedules, and holds a `dscs_[]` array of **DesignSpaceConfig** entries. Each `dscs_[]` entry is a single-key object wrapping a `DesignSpaceConfig` that defines the per-operation tensor descriptors, staging tile sizes, memory allocations, constants, and compute operations.
 
 ![SDSC JSON File — Object Hierarchy](figures/sdsc_json_hierarchy.png)
 
 *Figure: Complete object hierarchy of an SDSC JSON file.*
 
-**Colour legend**
+### Structural Hierarchy Tree
 
-| Colour | Group | Objects |
-|---|---|---|
-| Dark grey | Fold / coordinate reusables | `FoldProperty`, `FoldManager`, `DebugHandle`, `SourceLoc`, `ProvenanceTransform` |
-| Blue | Bundle / DSC structure | `SuperDsc` (SuperDSC), `WrappedDesignSpaceConfig`, `DesignSpaceConfig` |
-| Violet | Tensor objects | `LabeledDataStructure`, `MemoryOrganization`, `PrimaryDsInfo`, `ConstantInfo` |
-| Green | Scheduling & coordinate objects | `ScheduleTreeNode`, `CoordinateContainer`, `CoordinateInfo`, `DataStageParam` |
-| Amber | Compute objects | `ComputeOperation` (+ `attributes_` sub-object) |
-
-| Component | Role | Reference |
-|---|---|---|
-| **Object Hierarchy** | Full object tree of the entire JSON format | [JSON-object-Hierarchy.md](JSON-object-Hierarchy.md) |
-| **SuperDSC** | Root object — holds fold properties, work-slice maps, core schedule, and the `dscs_[]` array | [superdsc-object.md](superdsc-object.md) |
-| **DesignSpaceConfig** | Per-operation configuration — tensors, staging, schedule, and compute | [designspaceconfig.md](designspaceconfig.md) |
-| **LabeledDataStructure** | Tensor descriptor — role, format, scale, and memory residency | [labeleddatastructure.md](labeleddatastructure.md) |
-| **PrimaryDsInfo** | Tensor-type layout — memory dimension order and stick configuration | [primarydsinfo.md](primarydsinfo.md) |
-| **DataStageParam** | Per-core tile sizes for steady-state and epilogue passes | [datastageparam.md](datastageparam.md) |
-| **ScheduleTreeNode** | Memory allocation node — component, start addresses, coordinates | [scheduletreenode.md](scheduletreenode.md) |
-| **ComputeOperation** | Compute specification — execution unit, op name, tensor references | [computeoperation.md](computeoperation.md) |
-| **MemoryOrganization** | HBM / LX scratchpad residency flags per tensor | [memoryorganization.md](memoryorganization.md) |
+```
+Root Object (Dynamic operation name key, e.g. "exp", "matmul", "gelu")
+│
+└─── SuperDSC (Bundle-level configuration)
+     ├─── coreFoldProp_: FoldProperty (required)
+     ├─── coreletFoldProp_: FoldProperty (required)
+     ├─── numCoresUsed_: integer (required)
+     ├─── coreIdToDsc_: Object<coreId → dscIndex> (required)
+     ├─── coreIdToDscSchedule: Object<coreId → Array<[datadsc_idx, dldsc_idx, before_sync, after_sync]>> (required)
+     ├─── numWkSlicesPerDim_: Object<dimension → sliceCount>
+     ├─── coreIdToWkSlice_: Object<coreId → Object<dimension → sliceIndex>>
+     ├─── sdscFoldProps_: Array<FoldProperty>
+     ├─── sdscFolds_: FoldManager
+     ├─── dimToSymbolMappingOpcodeCorrection_: Object<symbol → string>
+     ├─── inputSymbolsAndTags_: Object<symbol → string>
+     ├─── symbolDefinitions_: Object
+     ├─── debug_handle_: DebugHandle | null
+     ├─── datadscs_: Array<Object> (always [] when present)
+     │
+     └─── dscs_: Array<WrappedDesignSpaceConfig> (required)
+          │
+          └─── WrappedDesignSpaceConfig (operation name wrapper key)
+               │
+               └─── DesignSpaceConfig (per-operation configuration)
+                    ├─── numCoresUsed_: integer (required)
+                    ├─── numCoreletsUsed_: integer
+                    ├─── coreIdsUsed_: Array<integer> (required)
+                    ├─── N_: DataStructDims (required)
+                    ├─── dimToSymbolMapping_: Object<dimension → Array<string>>
+                    ├─── coordinateMasking_: Object
+                    ├─── maskingConstId_: integer
+                    ├─── pdsRelation_: Object
+                    │
+                    ├─── dataStageParam_: Object<stageId → Object>
+                    │    ├─── name_: "core" | "corelet" | "row"
+                    │    ├─── ss_: DataStructDims
+                    │    └─── el_: DataStructDims
+                    │
+                    ├─── primaryDsInfo_: Object<label → Object>
+                    │    ├─── layoutDimOrder_: Array<string>
+                    │    ├─── stickDimOrder_: Array<string>
+                    │    ├─── stickSize_: Array<integer>
+                    │    └─── stickRepl_: Array<integer>
+                    │
+                    ├─── scheduleTree_: Array<ScheduleTreeNode> (required)
+                    │    └─── ScheduleTreeNode
+                    │         ├─── nodeType_: "allocate" (required)
+                    │         ├─── name_: string (required)
+                    │         ├─── ldsIdx_: integer
+                    │         ├─── component_: "hbm" | "lx"
+                    │         ├─── layoutDimOrder_: Array<string>
+                    │         ├─── maxDimSizes_: Array<integer>
+                    │         ├─── isStartAddrSymbolic_: boolean | 0 | 1
+                    │         ├─── startAddressCoreCorelet_: FoldManager
+                    │         ├─── backGapCore_: Object
+                    │         ├─── padding_: Object
+                    │         ├─── indirectAllocType_: "no_indirection" | "value_tensor" | "index_tensor"
+                    │         ├─── relatedIndirectAccessAlloc_: string
+                    │         ├─── indexTensorType_: "index" | "address"
+                    │         └─── coordinates_: CoordinateContainer
+                    │              └─── coordInfo: Object<dimension → CoordinateInfo>
+                    │                   └─── folds: FoldManager (required)
+                    │
+                    ├─── labeledDs_: Array<LabeledDataStructure> (required)
+                    │    └─── LabeledDataStructure
+                    │         ├─── ldsIdx_: integer (required)
+                    │         ├─── dsName_: string (required)
+                    │         ├─── dsType_: "INPUT" | "OUTPUT" | "KERNEL" | "KERNEL_IDX" (required)
+                    │         ├─── scale_: Array<number>
+                    │         ├─── wordLength: number (>0; fractional for sub-byte types)
+                    │         ├─── dataFormat_: string (required)
+                    │         └─── memOrg_: MemoryOrganization (required)
+                    │              ├─── hbm: MemorySlot (isPresent, isPadded, isZeroPadded, allocateNode_)
+                    │              └─── lx: MemorySlot (isPresent, isPadded, isZeroPadded, allocateNode_)
+                    │
+                    ├─── constantInfo_: Object<index → ConstantInfo> | string "{}"
+                    │    └─── ConstantInfo
+                    │         ├─── name_: string (required)
+                    │         ├─── dataFormat_: string (required)
+                    │         └─── data_: FoldManager (required)
+                    │
+                    └─── computeOp_: Array<ComputeOperation> (required)
+                         └─── ComputeOperation
+                              ├─── exUnit: "sfp" | "pt" (required)
+                              ├─── opFuncName: string (required)
+                              ├─── attributes_: Object (dataFormat_, fidelity_)
+                              ├─── inputLabeledDs: Array<string> (required)
+                              ├─── outputLabeledDs: Array<string> (required)
+                              └─── indirectAccessIndexLabeledDs: Array<string>
+```
 
 ---
 
-## Filling a JSON File — Step-by-Step
+## JSON Object Reference Index
 
-This section walks through filling an SDSC JSON file in the same order as the
-[`SuperDsc` object hierarchy](JSON-object-Hierarchy.md): SuperDSC top-level container
-first, then the per-operation `DesignSpaceConfig` fields in the order they
-appear in the schema, finishing with the deepest leaf objects.
+Below is the complete index of all 16 specification documents governing the SDSC JSON format, organized by architectural layer.
 
-| Step | Object / Field | Hierarchy level |
+### 1. Bundle & Top-Level Objects
+
+| Object / Topic | Document | Description |
 |---|---|---|
-| 1 | Root key · `SuperDsc`: `coreFoldProp_`, `coreletFoldProp_`, `numCoresUsed_` | Root → SuperDSC |
-| 2 | `SuperDsc`: `numWkSlicesPerDim_`, `coreIdToWkSlice_`, `coreIdToDsc_`, `coreIdToDscSchedule` | SuperDSC |
-| 3 | `dscs_` entry · `DesignSpaceConfig`: `numCoresUsed_`, `coreIdsUsed_` | SuperDSC → DSC |
-| 4 | `DesignSpaceConfig`: `N_`, `dataStageParam_` | DSC |
-| 5 | `DesignSpaceConfig`: `primaryDsInfo_` | DSC |
-| 6 | `DesignSpaceConfig`: `scheduleTree_` → `ScheduleTreeNode` → `coordinates_` → `CoordinateInfo` | DSC (deepest branch) |
-| 7 | `DesignSpaceConfig`: `labeledDs_` → `LabeledDataStructure` → `memOrg_` | DSC |
-| 8 | `DesignSpaceConfig`: `constantInfo_` → `ConstantInfo` | DSC |
-| 9 | `DesignSpaceConfig`: `computeOp_` → `ComputeOperation` | DSC (last leaf) |
+| **SuperDSC** | [superdsc-object.md](superdsc-object.md) | Top-level object holding core folds, work-slice mappings, per-core schedule tuples, and the `dscs_[]` array. |
+| **FoldProperty** | [foldproperty.md](foldproperty.md) | Pairs a fold factor with a memory hierarchy level label (`"core"`, `"corelet"`, `"time"`, etc.) for compact multi-core representations. |
+| **FoldManager** | [foldmanager.md](foldmanager.md) | Reusable structure mapping multi-dimensional loop index tuples (core, corelet, time) to coordinates and start addresses via affine functions. |
 
-### Step 1 — Root key and SuperDSC fold properties
+### 2. Design Space Configuration & Staging
 
-Create the root object with a single key — the operation name string
-(pattern `^[a-zA-Z0-9_/\-][a-zA-Z0-9_/\-]*$`). Its value is the
-[`SuperDsc`](superdsc-object.md) object. Fill the fold properties first, as
-every [`FoldManager`](foldmanager.md) used later inherits from these:
+| Object / Topic | Document | Description |
+|---|---|---|
+| **DesignSpaceConfig** | [designspaceconfig.md](designspaceconfig.md) | Per-operation configuration container holding tensor descriptors, staging parameters, memory schedule tree, constants, and compute operations. |
+| **DataStructDims** | [datastructdims.md](datastructdims.md) | Dimension-size specification for total problem dimensions (`N_`), per-core tile staging (`ss_`, `el_`), and symbolic dimension metadata. |
+| **DataStageParam** | [datastageparam.md](datastageparam.md) | Per-core tile sizes for steady-state (`ss_`) and epilogue (`el_`) passes transferring data into LX scratchpad memory. |
+| **PrimaryDsInfo** | [primarydsinfo.md](primarydsinfo.md) | Tensor role layout descriptor defining memory dimension ordering and stick packing configuration. |
 
-- Set `coreFoldProp_.factor_` to a value between 1 and the maximum number of cores
-  in use (e.g. `32` for a full-chip bundle, or `2` for a 2-core bundle). Set `label_` to `"core"`.
-- Set `coreletFoldProp_.factor_` to `2`. Set `label_` to `"corelet"`.
-- Set `numCoresUsed_` to the total number of cores.
-- (Optional) Set `sdscFoldProps_` and `sdscFolds_` only when bundle-level fold
-  dimensions above the core level are required.
+### 3. Memory Scheduling & Coordinates
 
-### Step 2 — SuperDSC work-division maps
+| Object / Topic | Document | Description |
+|---|---|---|
+| **ScheduleTreeNode** | [scheduletreenode.md](scheduletreenode.md) | Allocation node specifying device memory placement (HBM or LX), dimension order, per-core start addresses, and coordinate mapping. |
+| **CoordinateContainer** | [coordinatecontainer.md](coordinatecontainer.md) | Container holding the per-dimension `CoordinateInfo` dictionary for tensor coordinates. |
+| **CoordinateInfo** | [coordinateinfo.md](coordinateinfo.md) | Spatial/temporal partitioning flags, padding classification, and affine `FoldManager` mappings per tensor dimension. |
 
-Still in [`SuperDsc`](superdsc-object.md), fill the maps that assign work
-slices and DSC indices to cores:
+### 4. Tensor Descriptors & Constants
 
-- Set `numWkSlicesPerDim_`: for each dimension being split across cores, record
-  the total number of slices (e.g. `{"mb": 2}` for a 2-way minibatch split).
-- Set `coreIdToWkSlice_`: for each core ID, map each split dimension to the
-  slice index that core handles (e.g. `{"0": {"mb": 0}, "1": {"mb": 1}}`).
-- Set `coreIdToDsc_`: map each core ID (as a string integer) to its zero-based
-  index into `dscs_`. All cores typically map to `0` when work is balanced.
-- Set `coreIdToDscSchedule`: for each core, one schedule tuple `[-1, 0, 0, 0]`
-  covers the common case (single DSC, no data-op DSC, no barriers). The four integers are
-  `[datadsc_idx, dldsc_idx, before_sync, after_sync]`:
-  - `datadsc_idx` = `-1` (default; index into `datadscs_`, or `-1` when no data DSC is attached)
-  - `dldsc_idx` = `0` (zero-based index into `dscs_` for the executed `DesignSpaceConfig`)
-  - `before_sync` = `0` (no barrier before step)
-  - `after_sync` = `0` (no barrier after step)
-- (Optional) Populate `inputSymbolsAndTags_`, `symbolDefinitions_`, and
-  `dimToSymbolMappingOpcodeCorrection_` when symbolic dimensions are used.
+| Object / Topic | Document | Description |
+|---|---|---|
+| **LabeledDataStructure** | [labeleddatastructure.md](labeleddatastructure.md) | Logical tensor descriptor defining role (`INPUT`, `OUTPUT`, `KERNEL`), data format, bit width, broadcast scale, and memory residency. |
+| **MemoryOrganization** | [memoryorganization.md](memoryorganization.md) | Hardware residency flags and allocate-node links for HBM and LX scratchpad memory slots. |
+| **ConstantInfo** | [constantinfo.md](constantinfo.md) | Constant tensors and scalar values encoded via affine `FoldManager` structures. |
 
-### Step 3 — DesignSpaceConfig identity (inside dscs_)
+### 5. Compute Operations
 
-Add one entry to `dscs_` — a single-key object `{"<op_name>": <DesignSpaceConfig>}`.
-Inside the [`DesignSpaceConfig`](designspaceconfig.md), set the core identity
-fields first, as they are referenced by the data-staging and tensor steps below:
+| Object / Topic | Document | Description |
+|---|---|---|
+| **ComputeOperation** | [computeoperation.md](computeoperation.md) | Compute kernel specification defining execution engine (`pt` or `sfp`), operation name, numeric fidelity, and input/output tensor bindings. |
 
-- Set `numCoresUsed_` and `coreIdsUsed_` to match the cores assigned to this
-  DSC via `coreIdToDsc_` in Step 2.
+### 6. Layout & Padding Constraints
 
-### Step 4 — Total operation dimensions (N_) and data staging (dataStageParam_)
+| Object / Topic | Document | Description |
+|---|---|---|
+| **Stick Layout Constraints** | [stick-layout-constraints.md](stick-layout-constraints.md) | Normative hardware stick constraints per operation category and per-core work-division rules. |
+| **Padding** | [padding.md](padding.md) | Convolution and pooling window padding specification across steady-state and epilogue tiles. |
+| **Stick-Alignment Padding** | [stick-padding.md](stick-padding.md) | Hardware stick-dimension alignment and padding requirements across memory components. |
 
-In [`DesignSpaceConfig.N_`](datastructdims.md):
+---
 
-- Set each dimension field that participates in the operation to its total
-  (un-tiled) size. Set all others to `-1`.
-- For symbolic dimensions, set the field to `-1` (sentinel) and populate
-  `dimToSymbolMapping_` to link each symbolic dimension name to its symbol ID.
+## Section-by-Section Structural Specification
 
-In [`DesignSpaceConfig.dataStageParam_`](datastageparam.md):
+### 1. Root Key and Bundle-Level Structure (`SuperDsc`)
+The root of the document is a single-key dictionary where the key is the operation name string (e.g., `"matmul"`, `"conv2d"`), matching regex `^[a-zA-Z0-9_/\-][a-zA-Z0-9_/\-]*$`. Its value is the [`SuperDsc`](superdsc-object.md) object.
+- **Fold hierarchy**: `coreFoldProp_` specifies the core-level division factor (up to 32); `coreletFoldProp_` is emitted with factor 1 as a pass-through constant.
+- **Work division**: `numWkSlicesPerDim_` and `coreIdToWkSlice_` map loop dimensions (e.g. `mb`, `out`) across individual cores.
+- **Scheduling**: `coreIdToDsc_` maps each string core ID (`"0"`, `"1"`, …) to a zero-based index in `dscs_`. `coreIdToDscSchedule` assigns a 4-integer step tuple `[datadsc_idx, dldsc_idx, before_sync, after_sync]` per core.
+- **Symbolic registry**: Optional fields (`symbolDefinitions_`, `inputSymbolsAndTags_`, `dimToSymbolMappingOpcodeCorrection_`) register dynamic runtime symbols.
 
-- Add exactly one entry with key `"0"`. Optionally set `name_` to `"core"` — the schema does not require it, but it is conventional for all compute operations. Valid values are `"core"`, `"corelet"`, or `"row"`; `"core"` is the conventional choice for compute operations.
-- Set `ss_` and `el_` to the per-core tile sizes. When work divides evenly
-  `ss_` and `el_` are identical; `el_` carries the smaller final tile
-  when it does not.
-- For window/padded operations (avgpool2d, maxpool2d, conv2d, depthwise conv2d): add `paddingSizes_`
-  to both `ss_` and `el_`. If a padded dimension is split across cores, set
-  `padFront_` and `padBack_` to `-1` in the per-core data staging entry.
-  See [Padding](padding.md) for the full field set.
-- For symbolic dimensions: add `symbolicDimInfo_` inside each
-  [`DataStructDims`](datastructdims.md). Set `maxSize_` to the upper bound and
-  `granularity_` to the step constraint. When the dimension is split across N
-  cores, `granularity_` MUST be a multiple of N, and `ss_`/`el_` values MUST
-  be scaled to the per-core size.
+### 2. Wrapped DSC (`WrappedDesignSpaceConfig`)
+The `dscs_` array contains one or more `WrappedDesignSpaceConfig` entries. Each entry is a single-key object whose key is the sub-operation name and whose value is the [`DesignSpaceConfig`](designspaceconfig.md).
+- **Core allocation**: `numCoresUsed_` and `coreIdsUsed_` record the active cores for this compute phase.
+- **Global problem geometry**: `N_` ([`DataStructDims`](datastructdims.md)) holds the un-tiled problem dimensions. Inactive dimensions are set to `-1`. Symbolic dimensions are set to `-1` and referenced in `dimToSymbolMapping_`.
 
-### Step 5 — Tensor layout (primaryDsInfo_)
+### 3. Data Staging (`dataStageParam_`)
+Holds tile staging configurations keyed by string index (`"0"`):
+- `ss_`: Steady-state tile size per core for full iterations.
+- `el_`: Epilogue tile size per core for boundary iterations.
+- `paddingSizes_`: Optional window padding parameters for convolution/pooling operations.
 
-In [`DesignSpaceConfig.primaryDsInfo_`](primarydsinfo.md), add one entry for
-each distinct tensor role. Multiple tensors that share the same stick layout
-can share one entry:
+### 4. Tensor Layout (`primaryDsInfo_`)
+Maps tensor roles (`INPUT`, `OUTPUT`, `KERNEL`, `KERNEL_IDX`) to layout descriptors:
+- `layoutDimOrder_`: Memory dimension order (outermost to innermost).
+- `stickDimOrder_` & `stickSize_`: Parallel arrays defining stick composition and hardware packing according to [Stick Layout Constraints](stick-layout-constraints.md).
 
-- Key each entry by `dsType_` (`"INPUT"`, `"OUTPUT"`, `"KERNEL"`,
-  `"KERNEL_IDX"`).
-- Set `layoutDimOrder_` (outermost dimension first).
-- Set `stickDimOrder_` and `stickSize_` as parallel arrays. Consult
-  [Stick Layout Constraints](stick-layout-constraints.md) for the exact
-  stick rules for each operation category.
+### 5. Memory Allocation Schedule (`scheduleTree_`)
+An ordered array of [`ScheduleTreeNode`](scheduletreenode.md) objects representing allocation nodes (`nodeType_: "allocate"`):
+- `component_`: Memory level (`"hbm"` or `"lx"`).
+- `startAddressCoreCorelet_`: A [`FoldManager`](foldmanager.md) mapping each core to its byte offset (or symbol ID if `isStartAddrSymbolic_` is `true`).
+- `coordinates_`: A [`CoordinateContainer`](coordinatecontainer.md) containing a [`CoordinateInfo`](coordinateinfo.md) for each tensor dimension with affine fold expressions mapping the core/corelet/row index to tensor coordinates.
 
-### Step 6 — Memory allocation schedule (scheduleTree_)
+### 6. Tensor Descriptors (`labeledDs_`)
+An array of [`LabeledDataStructure`](labeleddatastructure.md) entries describing each logical tensor:
+- `ldsIdx_`: Sequential zero-based integer index.
+- `dsType_`: Role matching `primaryDsInfo_` (`"INPUT"`, `"OUTPUT"`, `"KERNEL"`, `"KERNEL_IDX"`).
+- `dataFormat_`: Hardware data type (e.g. `"SEN169_FP16"`, `"IEEE_FP32"`).
+- `scale_`: Per-dimension broadcast/reduction scale vector (`1` = normal, `-1` = contracted/reduced).
+- `memOrg_`: [`MemoryOrganization`](memoryorganization.md) object indicating presence in `hbm` and/or `lx` scratchpads.
 
-In [`DesignSpaceConfig.scheduleTree_`](scheduletreenode.md), add one
-[`ScheduleTreeNode`](scheduletreenode.md) per tensor, in the order tensors
-will be allocated:
+### 7. Constants (`constantInfo_`)
+A map of string-integer indices (`"0"`, `"1"`, …) to [`ConstantInfo`](constantinfo.md) objects encoding constant values and broadcast addresses via a `FoldManager`. When no constants are used, the producer emits the string `"{}"`.
 
-- Set `nodeType_: "allocate"`, a unique `name_`, and `ldsIdx_` matching the
-  tensor's sequential position in `labeledDs_` (filled in Step 7).
-- Set `component_` to `"hbm"` or `"lx"`.
-- For HBM allocations, choose whether the tensor is stored as a single unified
-  tensor or per core with `nonUnifiedAllocInHBM_` (see
-  [`nonUnifiedAllocInHBM_`](scheduletreenode.md#nonunifiedallocinhbm_)):
-  - `false` (default): unified allocation. The tensor lives in HBM as one
-    single tensor covering all cores, sized by the total dimensions `N_`. A
-    start address is still filled for every core, but each is the start of that
-    core's sub-rectangle inside the one tensor (a common tensor base plus the
-    offset given by the core's slice coordinates and the layout strides).
-  - `true`: non-unified allocation. Each core's HBM data is its own smaller
-    tensor, sized by the per-core `"core"` data staging instead of by `N_`, and
-    placed independently in HBM. Leave `false` for LX allocations.
-- Set `layoutDimOrder_` and `maxDimSizes_` (use `-1` for unbound dimensions;
-  use the page size for paged value tensors).
-- Set `startAddressCoreCorelet_` as a [`FoldManager`](foldmanager.md):
-  - First fold dimension: `Map` function — each core ID maps to its own start
-    address in `data_`.
-  - Second fold dimension: `Const` function — all corelets on a core share the
-    same base address.
-  - When the address is not known at compile time, set
-    `isStartAddrSymbolic_: true` and use the symbol ID string (e.g. `"-1"`) as
-    the `data_` value in place of a concrete byte offset.
-- For back-gaps: populate `backGapCore_` with the gap size in elements, keyed
-  by dimension then by core ID. Use `"-1"` as the core ID key for HBM
-  allocations; use the actual core ID for LX allocations. Only back-gaps are
-  encoded here — front gaps are handled by advancing the start address.
-- For indirect access (paged tensors): set `indirectAllocType_` to
-  `"value_tensor"` or `"index_tensor"`, set `relatedIndirectAccessAlloc_` to
-  the name of the counterpart node, and set `indexTensorType_` (`"index"` or
-  `"address"`) on the index tensor's node. For direct (non-indirect) tensors
-  the field MAY be omitted or set to `"no_indirection"`.
-- Set `coordinates_` (a [`CoordinateContainer`](coordinatecontainer.md)): for
-  each tensor dimension, add a [`CoordinateInfo`](coordinateinfo.md) entry
-  whose `folds` [`FoldManager`](foldmanager.md) encodes the affine split
-  hierarchy (core → corelet → row → elements). The product of all `factor_`
-  values across all fold levels MUST equal the total element count for that
-  dimension. The spatial folds are set as follows:
-  - Core fold:
-    - For unified HBM allocations, N/A → `alpha_` = 1, `factor_` = 1.
-    - For LX, `alpha_` = coordinate offset across slices, `factor_` = number of
-      slices in the dimension.
-    - For non-unified HBM allocations (`nonUnifiedAllocInHBM_` set), same as
-      LX, as each core holds only its own slice.
-  - Corelet fold: N/A → `alpha_` = 1, `factor_` = 1.
-  - Row fold: N/A → `alpha_` = 1, `factor_` = 1.
+### 8. Compute Operations (`computeOp_`)
+An array of [`ComputeOperation`](computeoperation.md) entries specifying execution kernels:
+- `exUnit`: Target execution engine (`"pt"` for Processing Tree / matrix engine, `"sfp"` for Streaming Floating-Point vector engine).
+- `opFuncName`: Target hardware kernel name (e.g. `"batchmatmul"`, `"gelufwd"`, `"conv2dfwd"`).
+- `attributes_`: Execution parameters including numeric `dataFormat_` and `fidelity_` (`"regular"` or `"fast"`).
+- `inputLabeledDs` & `outputLabeledDs`: Named tensor references formatted as `"<dsName_>-idx<ldsIdx_>"`.
 
-### Step 7 — Tensor descriptors (labeledDs_)
+---
 
-In [`DesignSpaceConfig.labeledDs_`](labeleddatastructure.md), add one
-[`LabeledDataStructure`](labeleddatastructure.md) per tensor in the same
-order used for `ldsIdx_` in Step 6:
+## Producer Conventions & Invariants
 
-- Assign sequential `ldsIdx_` values (0, 1, 2, …) and a unique `dsName_`.
-- Set `dsType_` to match the key used in `primaryDsInfo_` (Step 5).
-- Set `dataFormat_` and optionally `wordLength`.
-- Set `scale_`: one entry per layout dimension in `layoutDimOrder_` order.
-  `1` = normal size, `-1` = reduced/broadcast, `-2` = reduced/broadcast stick
-  dimension.
-- Set `memOrg_`: set `hbm.isPresent` and/or `lx.isPresent` to `1` to match
-  the `component_` set on the corresponding `scheduleTree_` node (Step 6).
+Any frontend producer emitting SDSC JSON (such as `torch-spyre`) MUST adhere to the following structural conventions:
 
-### Step 8 — Constants (constantInfo_)
-
-In [`DesignSpaceConfig.constantInfo_`](constantinfo.md):
-
-- If the operation requires no constants, set the field to the string `"{}"`.
-- Otherwise, add one entry per constant, keyed by sequential string integer
-  (`"0"`, `"1"`, …). For each:
-  - Set `name_` to the agreed constant name for that operation.
-  - Set `dataFormat_` to match the tensors it is applied to.
-  - Set `data_` as a [`FoldManager`](foldmanager.md): use `Const` at both the
-    core and corelet fold levels when the value is the same on all cores (the
-    common case). Use `Map` at the core level only when the value differs per
-    core. Encode the value in the specified `dataFormat_` without zero-padding
-    to 32 bits; only one element entry in the vector is needed.
-
-### Step 9 — Compute operation (computeOp_)
-
-In [`DesignSpaceConfig.computeOp_`](computeoperation.md):
-
-- Set `opFuncName` to the operation string (e.g. `"gelufwd"`, `"batchmatmul"`).
-  See [Supported Operations](computeoperation.md#supported-operations) for the full table.
-- Set `attributes_.dataFormat_` to the execution format (`"SEN169_FP16"`,
-  `"IEEE_FP32"`, …).
-- Set `exUnit` to `"sfp"` or `"pt"`.
-- Populate `inputLabeledDs` and `outputLabeledDs` using the
-  `"<dsName_>-idx<ldsIdx_>"` composite names established in Step 7
-  (e.g. `"gelu-Tensor0-idx0"`).
-- For indirect access operations: populate `indirectAccessIndexLabeledDs` with
-  the index tensor references.
+1. **Root Key & Wrapper Key Pattern**: The top-level root key and the `dscs_` wrapper keys MUST match `^[a-zA-Z0-9_/\-][a-zA-Z0-9_/\-]*$`.
+2. **String-Integer Map Keys vs. Integer Arrays**: In map structures (such as `coreIdToDsc_`, `coreIdToWkSlice_`, `coreIdToDscSchedule`, `constantInfo_`, `dataStageParam_`), core IDs and sequence indices MUST be string-encoded integers (e.g. `"0"`, `"1"`). In array structures (such as `coreIdsUsed_`), core IDs MUST be literal integers (`0`, `1`).
+3. **Sentinel Values (`-1`)**: Inactive dimension fields in `N_`, unset staging dimensions, unbound dimensions in `maxDimSizes_`, and the default `datadsc_idx` in `coreIdToDscSchedule` all use `-1` as the sentinel value.
+4. **Empty Structures**:
+   - `constantInfo_` uses the string `"{}"` when no constants are present.
+   - `datadscs_` MUST be an empty array `[]` when emitted by the frontend.
+   - `coreletSplit_` in staging parameters is emitted as `{}`.
+5. **Pass-Through Constants**: Because `torch-spyre` partitions work at the core level and leaves corelet splitting to DeepTools, frontend-emitted artifacts set `coreletFoldProp_` to `{"factor_": 1, "label_": "corelet"}` and `numCoreletsUsed_` to `1`.
+6. **Schedule Step Tuple**: Each core schedule entry in `coreIdToDscSchedule` MUST be an array of exactly 4 integers `[datadsc_idx, dldsc_idx, before_sync, after_sync]`. Common single-DSC default is `[-1, 0, 0, 0]`.
+7. **Strict Schema Conformance**: All objects have `additionalProperties: false`. No extra or undeclared fields may be included.
 
 ---
 

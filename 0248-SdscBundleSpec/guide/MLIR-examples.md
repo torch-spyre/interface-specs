@@ -369,7 +369,7 @@ module {
   runtime batch size, so it cannot be a concrete integer in the JSON.
 - The `granularity_` constraint on `mb_` ensures the runtime value is always
   evenly divisible by the number of cores. See
-  [DataStructDims — `granularity_`](../spec/json/datastructdims.md) for the
+  [DataStructDims — `granularity_`](/0248-SdscBundleSpec/spec/json/datastructdims.md) for the
   normative rule (when a dimension is split across N cores, `granularity_` is a
   multiple of N).
 
@@ -507,7 +507,7 @@ module {
 
 **Key points:**
 - `device_mem_allocate` is placed in the entry block, outside any loop, so one buffer is reserved regardless of how many times surrounding control flow would pass through it.
-- Each `arith.addi` computes an absolute device address by adding a constant offset to the pool base; the choice of offset must satisfy the alignment requirement and keep overlapping live ranges in disjoint intervals. See [MLIR Bundle API — `device_mem_allocate` constraints](../spec/dialect/MLIR-bundle-API.md#sdscbundledevice_mem_allocate) for the normative rules.
+- Each `arith.addi` computes an absolute device address by adding a constant offset to the pool base; the choice of offset must satisfy the alignment requirement and keep overlapping live ranges in disjoint intervals. See [MLIR Bundle API — `device_mem_allocate` constraints](/0248-SdscBundleSpec/spec/dialect/MLIR-bundle-API.md#sdscbundledevice_mem_allocate) for the normative rules.
 
 ---
 

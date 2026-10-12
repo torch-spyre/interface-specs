@@ -64,7 +64,7 @@ It does **not** cover:
 | **SuperDSC-Bundle** | A set of files — one `bundle.mlir` and one or more `sdsc_*.json` files — that collectively describe a complex kernel to be compiled and executed on Spyre. |
 | **DSC (DesignSpaceConfig)** | One entry in the `dscs_[]` array of a SuperDSC object. Holds the tensor descriptors, schedule tree, data staging, and compute operation for one compute configuration. |
 | **core** | A single processing unit on Spyre, comprising one compute engine (AIU) and one scratchpad memory (LX). Spyre currently has 32 cores. |
-| **corelet** | A sub-unit within a core. Each core contains two corelets; `coreletFoldProp_.factor_` is always `2`. |
+| **corelet** | A sub-unit within a core. Each core contains two corelets. Frontend-emitted bundles (torch-spyre) set `coreletFoldProp_.factor_` to `1` and leave corelet splitting to DeepTools. |
 | **fold / folding** | A mechanism by which a single parameterised JSON artifact represents the behaviour of all cores compactly. Fold properties encode affine transformations (`α × index + β`) that compute per-core coordinates and addresses without duplicating the descriptor for each core. See [FoldProperty](spec/json/foldproperty.md) and [FoldManager](spec/json/foldmanager.md). |
 | **work division** | The assignment of portions of the operation's iteration space to individual cores, expressed via `numWkSlicesPerDim_`, `coreIdToWkSlice_`, and `coreFoldProp_`. |
 | **stick** | The innermost contiguous unit of tensor storage on Spyre. Each tensor dimension is either a *stick dimension* (innermost, packed) or a *non-stick dimension* (outer). The stick size and composition are constrained per operation category. See [Stick Layout Constraints](spec/json/stick-layout-constraints.md). |
@@ -111,7 +111,7 @@ A SuperDSC-Bundle contains:
 The API consists of two primary components:
 
 1. **MLIR Bundle File** (`.mlir`) — Orchestrates execution flow, symbol management, and operation sequencing across one or more SDSC JSON files. See [MLIR Bundle API](spec/dialect/MLIR-bundle-API.md) for the full dialect reference.
-2. **SDSC JSON Files** (`.json`) — Each file defines a single operation and its core mapping. See [SDSC JSON API](spec/json/SDSC-json-api.md) for the step-by-step filling guide and the [JSON Object Hierarchy](spec/json/JSON-object-Hierarchy.md) for the full object tree.
+2. **SDSC JSON Files** (`.json`) — Each file defines a single operation and its core mapping. See [SDSC JSON API](spec/json/SDSC-json-api.md) for the structural guide, object hierarchy, producer conventions, and complete JSON object reference index.
 
 > **Note:** `DesignSpaceConfig` can represent both deep learning operators (matmul, convolution, activations, reductions) and data-shuffle operations (stick-breaking, gather, scatter). Tensor allocation need not be compatible with compute work division — the backend compiler ensures proper data movement across cores.
 
@@ -155,13 +155,9 @@ From the MLIR perspective both kinds of symbolic value are unified: they are ope
 
 For the complete reference — `sdscbundle.sdsc_execute`, `sdscbundle.device_mem_allocate`, `sdscbundle.input_arg_extract`, `scf.for`, `arith.constant`, `arith.addi`, and `affine.apply` — with full syntax tables, constraints, and examples, see [MLIR Bundle API](spec/dialect/MLIR-bundle-API.md).
 
-### `sdsc_*.json` Filling
+### `sdsc_*.json` Structure and Object Reference
 
-Each `sdsc_*.json` file describes a single torch operation. For the complete step-by-step filling guide (Steps 1–9) with all field constraints and instructions, see [SDSC JSON API](spec/json/SDSC-json-api.md).
-
-### SuperDSC Object Fields
-
-The `SuperDsc` object is the top-level object of every `sdsc_*.json` file. For the full field reference see [SuperDSC Object](spec/json/superdsc-object.md).
+Each `sdsc_*.json` file describes a single torch operation. For the overall structural specification, object hierarchy, producer conventions, and complete index to all object reference documents, see [SDSC JSON API](spec/json/SDSC-json-api.md). For a step-by-step procedural walkthrough, see [Filling a JSON File — Step-by-Step](guide/Overview.md#filling-a-json-file--step-by-step) in the Overview guide.
 
 ### Supported OpFuncs in `sdsc.json`
 
@@ -191,48 +187,21 @@ Quick reference to every document in this specification, grouped by role.
 |----------|-------------|
 | [MLIR Bundle API](spec/dialect/MLIR-bundle-API.md) | Dialect operations, bundle container, symbolic values |
 
-### JSON Layer
+### JSON Layer & Object Reference
 
 | Document | Description |
 |----------|-------------|
-| [SDSC JSON API](spec/json/SDSC-json-api.md) | File structure and field-filling walkthrough |
-| [Object Hierarchy](spec/json/JSON-object-Hierarchy.md) | Annotated tree of every JSON key |
-| [JSON Schema (normative)](spec/sdscbundle-schema.json) | Machine-readable JSON Schema |
+| [SDSC JSON API](spec/json/SDSC-json-api.md) | Structural filling guide, object hierarchy tree, producer conventions, and complete JSON object reference index |
+| [JSON Schema (normative)](spec/sdscbundle-schema.json) | Machine-readable JSON Schema (draft 2020-12) |
 
-### JSON Object Reference
+> **Note:** For individual specifications of every JSON object, allocation node, tensor descriptor, constant encoding, compute operation, and layout constraint, see the complete [JSON Object Reference Index](spec/json/SDSC-json-api.md#json-object-reference-index) in the SDSC JSON API document.
 
-| Object | File |
-|--------|------|
-| SuperDSC | [superdsc-object.md](spec/json/superdsc-object.md) |
-| FoldProperty | [foldproperty.md](spec/json/foldproperty.md) |
-| FoldManager | [foldmanager.md](spec/json/foldmanager.md) |
-| Padding | [padding.md](spec/json/padding.md) |
-| Stick-Alignment Padding | [stick-padding.md](spec/json/stick-padding.md) |
-| Stick Layout Constraints | [stick-layout-constraints.md](spec/json/stick-layout-constraints.md) |
-| DesignSpaceConfig | [designspaceconfig.md](spec/json/designspaceconfig.md) |
-| LabeledDataStructure | [labeleddatastructure.md](spec/json/labeleddatastructure.md) |
-| MemoryOrganization | [memoryorganization.md](spec/json/memoryorganization.md) |
-| PrimaryDsInfo | [primarydsinfo.md](spec/json/primarydsinfo.md) |
-| DataStructDims | [datastructdims.md](spec/json/datastructdims.md) |
-| DataStageParam | [datastageparam.md](spec/json/datastageparam.md) |
-| ScheduleTreeNode | [scheduletreenode.md](spec/json/scheduletreenode.md) |
-| CoordinateContainer | [coordinatecontainer.md](spec/json/coordinatecontainer.md) |
-| CoordinateInfo | [coordinateinfo.md](spec/json/coordinateinfo.md) |
-| ComputeOperation | [computeoperation.md](spec/json/computeoperation.md) |
-| ConstantInfo | [constantinfo.md](spec/json/constantinfo.md) |
+### Guides & Examples (non-normative)
+
+See the [Overview Guide](guide/Overview.md), which introduces the Spyre stack and the step-by-step filling walkthrough, and links to all MLIR and JSON examples in `guide/`.
 
 ### References
 
 | Document | Description |
 |----------|-------------|
 | [References](spec/reference.md) | External specs and normative references |
-
-### Guide & Examples (non-normative)
-
-| Document | Description |
-|----------|-------------|
-| [Overview](guide/Overview.md) | Spyre stack overview and the two API components |
-| [MLIR Examples](guide/MLIR-examples.md) | Annotated MLIR bundle examples |
-| [MLIR Complete Example](guide/MLIR-complete-example.md) | Full end-to-end MLIR bundle |
-| [JSON Examples](guide/JSON-examples.md) | Complete and indirect-access JSON examples |
-

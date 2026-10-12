@@ -61,13 +61,13 @@ Six fields are required. No additional properties are allowed.
 | `sdscFoldProps_` | array of [FoldProperty](foldproperty.md) | No | — | SDSC-level fold properties when the bundle spans multiple fold dimensions above the core level. |
 | `sdscFolds_` | [FoldManager](foldmanager.md) | No | — | Fold manager encoding addresses or mappings at the bundle level, above the per-core level. |
 | `coreFoldProp_` | [FoldProperty](foldproperty.md) | Yes | — | Fold factor and label for the core level of the memory hierarchy (e.g. `factor_: 2, label_: "core"`). |
-| `coreletFoldProp_` | [FoldProperty](foldproperty.md) | Yes | — | Fold factor and label for the corelet level of the memory hierarchy (e.g. `factor_: 2, label_: "corelet"`). |
+| `coreletFoldProp_` | [FoldProperty](foldproperty.md) | Yes | — | Fold factor and label for the corelet level of the memory hierarchy (e.g. `factor_: 1, label_: "corelet"`). |
 | `numCoresUsed_` | integer | Yes | >= 1 | Total number of Spyre cores used across all DSCs in this bundle. |
 | `debug_handle_` | DebugHandle or null | No† | — | Source-to-kernel provenance for this SuperDSC. Consumed by tooling that maps a compiled kernel back to its source; it does not affect compilation. Includes the source file/line (`source`), ATen op name (`aten_op`), lowering chain (`ir_chain`), fusion origins (`fused_from`), and rewrite history (`transform_history`). `null` is a normal value (not missing data) when provenance is unavailable. |
 | `dimToSymbolMappingOpcodeCorrection_` | map&lt;string, string&gt; | No | Keys: dim names | Symbol mapping corrections applied during opcode generation. Keys are dimension names; values are corrected symbol names. |
 | `inputSymbolsAndTags_` | map&lt;string, string&gt; | No | Keys: symbol names | Input symbols and their associated tags for symbolic dimension resolution. |
 | `symbolDefinitions_` | object | No | — | Variable definitions for symbolic dimensions used across the bundle. |
-| `datadscs_` | array of object | No | — | Array of data-operation DSCs (e.g. transpose, slice) attached to this `SuperDsc`. Each element is imported by the backend as a `DataOpDsc`. The frontend only emits this field when symbolic dimensions are present, and always as an empty array `[]`; consumers MUST tolerate its absence. |
+| `datadscs_` | array of object | No | — | Array of data-operation DSCs (e.g. transpose, slice) attached to this `SuperDsc`. The frontend only emits this field when symbolic dimensions are present, and always as an empty array `[]`; otherwise the field is absent. |
 | `coreIdToDsc_` | map&lt;string, integer&gt; | Yes | Keys: `^[0-9]+$`; values >= 0 | Maps each core ID (string integer) to a zero-based index into `dscs_`. Multiple cores with the same index share one `DesignSpaceConfig`. |
 | `numWkSlicesPerDim_` | map&lt;string, integer&gt; | No | Keys: dim names; values >= 1 | Total number of work slices per dimension across all cores. |
 | `coreIdToWkSlice_` | map&lt;string, map&lt;string, integer&gt;&gt; | No | Outer keys: core IDs; inner keys: dim names; values >= 0 | Maps each core ID to a map of dimension name → work slice index assigned to that core. |
@@ -91,7 +91,7 @@ single schedule step per core.
 {
   "gelu_forward": {
     "coreFoldProp_":    {"factor_": 2, "label_": "core"},
-    "coreletFoldProp_": {"factor_": 2, "label_": "corelet"},
+    "coreletFoldProp_": {"factor_": 1, "label_": "corelet"},
     "numCoresUsed_": 2,
     "coreIdToDsc_": {
       "0": 0,

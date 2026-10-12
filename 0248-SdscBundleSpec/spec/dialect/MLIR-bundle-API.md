@@ -132,8 +132,8 @@ On the **JSON side**, symbolic dimension sizes are expressed by:
   dimension names (e.g. `"mb_"`, `"in_"`) to symbolic variable names, declaring
   which dimensions are symbolic.
 - [`DataStructDims.symbolicDimInfo_`](../json/datastructdims.md) — for each symbolic
-  dimension, records `maxSize_` (the upper bound the backend MUST plan for) and
-  `granularity_` (the step the runtime value MUST be a multiple of).
+  dimension, records `maxSize_` (the upper bound on the dimension size) and
+  `granularity_` (the step the runtime value is a multiple of).
 - [`DataStructDims.maxSymbolicVolume_`](../json/datastructdims.md) — caps the combined
   volume across a set of symbolic dimensions.
 - [`SuperDsc.symbolDefinitions_`](../json/superdsc-object.md),
@@ -227,8 +227,7 @@ sdscbundle.sdsc_execute (%operand1, %operand2, ...) {
 - **symbol_ids** (OPTIONAL): `array<int>` — list of symbol IDs used in the
   SDSC. Values are negative integers (e.g., `-1`, `-2`, `-3`). Each ID maps
   positionally to one operand and corresponds to a symbolic start address or
-  size inside the JSON. See [Constraints](#constraints) below for uniqueness
-  rules.
+  size inside the JSON.
 
 **Returns:** None.
 
@@ -391,7 +390,7 @@ operand to `sdscbundle.sdsc_execute`.
 - `value` — the runtime base address or dimension size provided by the caller.
   Available on all `input_arg` parameters.
 - `granularity` — the step constraint for a symbolic dimension size (i.e. the
-  runtime value MUST be a multiple of this). Corresponds to `granularity_` in
+  runtime value is a multiple of this). Corresponds to `granularity_` in
   [`SymbolicDimInfo`](../json/datastructdims.md#symbolicdiminfo) in the accompanying SDSC.
 - `max_value` — the upper bound for a symbolic dimension size. Corresponds to
   `maxSize_` in [`SymbolicDimInfo`](../json/datastructdims.md#symbolicdiminfo) in the
