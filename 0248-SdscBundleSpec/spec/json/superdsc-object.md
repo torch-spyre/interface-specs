@@ -40,10 +40,7 @@ Each entry in `dscs_` is a single-key object — the key is the operation name
   "coreFoldProp_":                         <FoldProperty>,
   "coreletFoldProp_":                      <FoldProperty>,
   "numCoresUsed_":                         <int>,
-  "dimToSymbolMappingOpcodeCorrection_":   <map<string, string>>,
   "inputSymbolsAndTags_":                  <map<string, string>>,
-  "symbolDefinitions_":                    <object>,
-  "datadscs_":                             [<object>, ...],
   "coreIdToDsc_":                          <map<string, int>>,
   "numWkSlicesPerDim_":                    <map<string, int>>,
   "coreIdToWkSlice_":                      <map<string, map<string, int>>>,
@@ -64,10 +61,7 @@ Six fields are required. No additional properties are allowed.
 | `coreletFoldProp_` | [FoldProperty](foldproperty.md) | Yes | — | Fold factor and label for the corelet level of the memory hierarchy (e.g. `factor_: 1, label_: "corelet"`). |
 | `numCoresUsed_` | integer | Yes | >= 1 | Total number of Spyre cores used across all DSCs in this bundle. |
 | `debug_handle_` | DebugHandle or null | No† | — | Source-to-kernel provenance for this SuperDSC. Consumed by tooling that maps a compiled kernel back to its source; it does not affect compilation. Includes the source file/line (`source`), ATen op name (`aten_op`), lowering chain (`ir_chain`), fusion origins (`fused_from`), and rewrite history (`transform_history`). `null` is a normal value (not missing data) when provenance is unavailable. |
-| `dimToSymbolMappingOpcodeCorrection_` | map&lt;string, string&gt; | No | Keys: dim names | Symbol mapping corrections applied during opcode generation. Keys are dimension names; values are corrected symbol names. |
 | `inputSymbolsAndTags_` | map&lt;string, string&gt; | No | Keys: symbol names | Input symbols and their associated tags for symbolic dimension resolution. |
-| `symbolDefinitions_` | object | No | — | Variable definitions for symbolic dimensions used across the bundle. |
-| `datadscs_` | array of object | No | — | Array of data-operation DSCs (e.g. transpose, slice) attached to this `SuperDsc`. The frontend only emits this field when symbolic dimensions are present, and always as an empty array `[]`; otherwise the field is absent. |
 | `coreIdToDsc_` | map&lt;string, integer&gt; | Yes | Keys: `^[0-9]+$`; values >= 0 | Maps each core ID (string integer) to a zero-based index into `dscs_`. Multiple cores with the same index share one `DesignSpaceConfig`. |
 | `numWkSlicesPerDim_` | map&lt;string, integer&gt; | No | Keys: dim names; values >= 1 | Total number of work slices per dimension across all cores. |
 | `coreIdToWkSlice_` | map&lt;string, map&lt;string, integer&gt;&gt; | No | Outer keys: core IDs; inner keys: dim names; values >= 0 | Maps each core ID to a map of dimension name → work slice index assigned to that core. |
@@ -133,12 +127,12 @@ Each schedule entry in `coreIdToDscSchedule` is an array of 4-element tuples `[d
 
 | Position | Field | Type | Description | Default / Typical |
 |---|---|---|---|---|
-| 0 | `datadsc_idx` | integer | Index into `datadscs_` for data-operation DSCs (transpose, slice). `-1` indicates no data DSC is attached. | `-1` |
+| 0 | `datadsc_idx` | integer | Reserved; always `-1`. No data-operation DSC is attached. | `-1` |
 | 1 | `dldsc_idx` | integer | Zero-based index into `dscs_` identifying the compute/data-load `DesignSpaceConfig` executed at this step. | `0` (for single-DSC bundles) |
 | 2 | `before_sync` | integer | Barrier flag before executing this step. `0` = no synchronization barrier, `1` = barrier synchronization. | `0` |
 | 3 | `after_sync` | integer | Barrier flag after executing this step. `0` = no synchronization barrier, `1` = barrier synchronization. | `0` |
 
-In practice, the standard step tuple for single-operation bundles is `[-1, 0, 0, 0]`, indicating no data-op DSC (`datadsc_idx = -1`), execution of DSC index 0 (`dldsc_idx = 0`), and no synchronization barriers before or after (`before_sync = 0`, `after_sync = 0`).
+In practice, the standard step tuple for single-operation bundles is `[-1, 0, 0, 0]`, indicating `datadsc_idx = -1` (reserved, always unused), execution of DSC index 0 (`dldsc_idx = 0`), and no synchronization barriers before or after (`before_sync = 0`, `after_sync = 0`).
 
 ---
 

@@ -42,12 +42,8 @@ Root Object (Dynamic operation name key, e.g. "exp", "matmul", "gelu")
      ├─── coreIdToWkSlice_: Object<coreId → Object<dimension → sliceIndex>>
      ├─── sdscFoldProps_: Array<FoldProperty>
      ├─── sdscFolds_: FoldManager
-     ├─── dimToSymbolMappingOpcodeCorrection_: Object<symbol → string>
      ├─── inputSymbolsAndTags_: Object<symbol → string>
-     ├─── symbolDefinitions_: Object
      ├─── debug_handle_: DebugHandle | null
-     ├─── datadscs_: Array<Object> (always [] when present)
-     │
      └─── dscs_: Array<WrappedDesignSpaceConfig> (required)
           │
           └─── WrappedDesignSpaceConfig (operation name wrapper key)
@@ -60,8 +56,6 @@ Root Object (Dynamic operation name key, e.g. "exp", "matmul", "gelu")
                     ├─── dimToSymbolMapping_: Object<dimension → Array<string>>
                     ├─── coordinateMasking_: Object
                     ├─── maskingConstId_: integer
-                    ├─── pdsRelation_: Object
-                    │
                     ├─── dataStageParam_: Object<stageId → Object>
                     │    ├─── name_: "core" | "corelet" | "row"
                     │    ├─── ss_: DataStructDims
@@ -182,7 +176,7 @@ The root of the document is a single-key dictionary where the key is the operati
 - **Fold hierarchy**: `coreFoldProp_` specifies the core-level division factor (up to 32); `coreletFoldProp_` is emitted with factor 1 as a pass-through constant.
 - **Work division**: `numWkSlicesPerDim_` and `coreIdToWkSlice_` map loop dimensions (e.g. `mb`, `out`) across individual cores.
 - **Scheduling**: `coreIdToDsc_` maps each string core ID (`"0"`, `"1"`, …) to a zero-based index in `dscs_`. `coreIdToDscSchedule` assigns a 4-integer step tuple `[datadsc_idx, dldsc_idx, before_sync, after_sync]` per core.
-- **Symbolic registry**: Optional fields (`symbolDefinitions_`, `inputSymbolsAndTags_`, `dimToSymbolMappingOpcodeCorrection_`) register dynamic runtime symbols.
+- **Symbolic registry**: The optional field `inputSymbolsAndTags_` registers dynamic runtime symbols.
 
 ### 2. Wrapped DSC (`WrappedDesignSpaceConfig`)
 The `dscs_` array contains one or more `WrappedDesignSpaceConfig` entries. Each entry is a single-key object whose key is the sub-operation name and whose value is the [`DesignSpaceConfig`](designspaceconfig.md).
@@ -235,8 +229,6 @@ Any frontend producer emitting SDSC JSON (such as `torch-spyre`) MUST adhere to 
 3. **Sentinel Values (`-1`)**: Inactive dimension fields in `N_`, unset staging dimensions, unbound dimensions in `maxDimSizes_`, and the default `datadsc_idx` in `coreIdToDscSchedule` all use `-1` as the sentinel value.
 4. **Empty Structures**:
    - `constantInfo_` uses the string `"{}"` when no constants are present.
-   - `datadscs_` MUST be an empty array `[]` when emitted by the frontend.
-   - `coreletSplit_` in staging parameters is emitted as `{}`.
 5. **Pass-Through Constants**: Because `torch-spyre` partitions work at the core level and leaves corelet splitting to DeepTools, frontend-emitted artifacts set `coreletFoldProp_` to `{"factor_": 1, "label_": "corelet"}` and `numCoreletsUsed_` to `1`.
 6. **Schedule Step Tuple**: Each core schedule entry in `coreIdToDscSchedule` MUST be an array of exactly 4 integers `[datadsc_idx, dldsc_idx, before_sync, after_sync]`. Common single-DSC default is `[-1, 0, 0, 0]`.
 7. **Strict Schema Conformance**: All objects have `additionalProperties: false`. No extra or undeclared fields may be included.

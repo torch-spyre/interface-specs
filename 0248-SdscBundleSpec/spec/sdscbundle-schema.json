@@ -40,13 +40,6 @@
           "description": "Total number of cores used",
           "minimum": 1
         },
-        "dimToSymbolMappingOpcodeCorrection_": {
-          "type": "object",
-          "description": "Symbol mapping corrections for opcode generation",
-          "patternProperties": {
-            "^[A-Za-z_][A-Za-z0-9_]*$": {"type": "string"}
-          }
-        },
         "inputSymbolsAndTags_": {
           "type": "object",
           "description": "Input symbols and their associated tags",
@@ -54,21 +47,12 @@
             "^[A-Za-z_][A-Za-z0-9_]*$": {"type": "string"}
           }
         },
-        "symbolDefinitions_": {
-          "type": "object",
-          "description": "Variable definitions for symbolic dimensions"
-        },
         "debug_handle_": {
           "description": "Source-to-kernel provenance for this SuperDsc. null is a normal value, not missing data. Consumed by tooling that maps a compiled kernel back to its source; it does not affect compilation. See DebugHandle.",
           "oneOf": [
             {"$ref": "#/$defs/DebugHandle"},
             {"type": "null"}
           ]
-        },
-        "datadscs_": {
-          "type": "array",
-          "description": "Data-operation descriptors (transpose, slice, ...) attached to this SuperDsc. Present only when symbolic dimensions are in use, and always as an empty array. Element contents are not specified here.",
-          "items": {"type": "object"}
         },
         "coreIdToDsc_": {
           "type": "object",
@@ -317,18 +301,6 @@
           "description": "Index into constantInfo_ of the masking constant, or -1 when the operation has none. -1 is the default and the common case.",
           "minimum": -1
         },
-        "pdsRelation_": {
-          "type": "object",
-          "description": "Relationships between the primary data structures. Set for pool and window operations.",
-          "properties": {
-            "isPdsReuse": {
-              "type": "integer",
-              "enum": [0, 1],
-              "description": "1 = the input and output primary data structures share storage."
-            }
-          },
-          "additionalProperties": false
-        },
         "dataStageParam_": {
           "type": "object",
           "description": "Data staging parameters per core. Each value has ss_ (steady-state dimensions) and el_ (epilogue dimensions).",
@@ -451,46 +423,6 @@
           "type": "object",
           "description": "Maximum combined symbolic volume for a set of symbolic dims. Keys are dim-set arrays encoded as strings (e.g. '[\"in_\",\"mb_\"]'); values are integer max volumes.",
           "additionalProperties": {"type": "integer"}
-        },
-        "coreletSplit_": {
-          "type": "object",
-          "description": "Per-dimension explicit work split across corelets. Keys are primary dim names; values are arrays of integer work sizes, one entry per corelet.",
-          "patternProperties": {
-            "^[A-Za-z_][A-Za-z0-9_]*$": {
-              "type": "array",
-              "items": {"type": "integer"}
-            }
-          }
-        },
-        "rowSplit_": {
-          "type": "object",
-          "description": "Per-dimension, per-corelet explicit work split across PT rows. Keys are primary dim names; values are objects keyed by corelet id (numeric string) whose values are arrays of integer work sizes per PT row.",
-          "patternProperties": {
-            "^[A-Za-z_][A-Za-z0-9_]*$": {
-              "type": "object",
-              "patternProperties": {
-                "^[0-9]+$": {
-                  "type": "array",
-                  "items": {"type": "integer"}
-                }
-              }
-            }
-          }
-        },
-        "peSfpSplit_": {
-          "type": "object",
-          "description": "Per-dimension, per-corelet work split between PE and SFP components. Keys are primary dim names; values are objects keyed by corelet id (numeric string) whose values are objects mapping component name (e.g. 'pe', 'sfp') to integer work size.",
-          "patternProperties": {
-            "^[A-Za-z_][A-Za-z0-9_]*$": {
-              "type": "object",
-              "patternProperties": {
-                "^[0-9]+$": {
-                  "type": "object",
-                  "additionalProperties": {"type": "integer"}
-                }
-              }
-            }
-          }
         },
         "paddingSizes_": {
           "type": "object",
