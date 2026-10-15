@@ -110,13 +110,14 @@ slices and DSC indices to cores:
 - Set `coreIdToDsc_`: map each core ID (as a string integer) to its zero-based
   index into `dscs_`. All cores typically map to `0` when work is balanced.
 - Set `coreIdToDscSchedule`: for each core, one schedule tuple `[-1, 0, 0, 0]`
-  covers the common case (single DSC, no barriers). The four integers are
+  covers the common case (single DSC, no data-op DSC, no barriers). The four integers are
   `[datadsc_idx, dldsc_idx, before_sync, after_sync]`:
-  - `datadsc_idx` = `-1` (reserved; always `-1`)
+  - `datadsc_idx` = `-1` (default; index into `datadscs_`, or `-1` when no data DSC is attached)
   - `dldsc_idx` = `0` (zero-based index into `dscs_` for the executed `DesignSpaceConfig`)
   - `before_sync` = `0` (no barrier before step)
   - `after_sync` = `0` (no barrier after step)
-- (Optional) Populate `inputSymbolsAndTags_` when symbolic dimensions are used.
+- (Optional) Populate `inputSymbolsAndTags_`, `symbolDefinitions_`, and
+  `dimToSymbolMappingOpcodeCorrection_` when symbolic dimensions are used.
 
 ### Step 3 — DesignSpaceConfig identity (inside dscs_)
 
