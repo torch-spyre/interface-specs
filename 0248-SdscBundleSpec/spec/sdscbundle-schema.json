@@ -222,7 +222,7 @@
       "properties": {
         "dim_prop_func": {
           "type": "array",
-          "description": "One fold function per dimension (same length as dim_prop_attr). Each element is a single-key object: Const (same value for all indices), Map (lookup in data_), or Affine (alpha*index+beta).",
+          "description": "One fold function per dimension (same length as dim_prop_attr). Each element is a single-key object: Const (same value for all indices), Map (lookup in data_), Affine (alpha*index+beta), or WkSplit (work-slice index from coreIdToWkSlice_).",
           "items": {
             "type": "object",
             "properties": {
@@ -234,7 +234,8 @@
                   "alpha_": {"type": "integer", "description": "Affine scale factor"},
                   "beta_": {"type": "integer", "description": "Affine offset"}
                 }
-              }
+              },
+              "WkSplit": {"type": "object"}
             }
           }
         },
@@ -422,7 +423,8 @@
     },
     "DataStructDims": {
       "type": "object",
-      "description": "Data structure dimensions. All numeric dimension values are numbers, with -1 meaning unset. Primary dimensions are in_, out_, mb_, i_, j_, ki_, kj_, x_, x1_, y_.",
+      "description": "Data structure dimensions. All numeric dimension values are numbers, with -1 meaning unset. A dimension a given operation does not use is omitted rather than set to -1.",
+      "additionalProperties": false,
       "properties": {
         "name_": {
           "type": "string",
@@ -436,7 +438,6 @@
         "ki_": {"type": "number", "description": "Kernel rows (derived). -1 = unset."},
         "kj_": {"type": "number", "description": "Kernel cols (derived). -1 = unset."},
         "x_": {"type": "number", "description": "Repeat dim that does not add reuse (e.g. attention heads). -1 = unset."},
-        "x1_": {"type": "number", "description": "Additional repeat dim (e.g. attention heads). -1 = unset."},
         "y_": {"type": "number", "description": "Kernel reuse dimension (e.g. timestep). -1 = unset."},
         "symbolicDimInfo_": {
           "type": "object",
@@ -494,12 +495,9 @@
         },
         "paddingSizes_": {
           "type": "object",
-          "description": "Per-dimension padding information. Keys are primary dim names (e.g. 'i', 'j'); values are DimPaddingSizes objects.",
-          "patternProperties": {
-            "^[A-Za-z_][A-Za-z0-9_]*$": {
-              "$ref": "#/$defs/DimPaddingSizes"
-            }
-          }
+          "description": "Per-dimension padding information for a windowed operation. Keyed by the padded output spatial dimension: 'i' or 'j'. Note the key carries no trailing underscore, unlike the dimension fields above.",
+          "propertyNames": {"enum": ["i", "j"]},
+          "additionalProperties": {"$ref": "#/$defs/DimPaddingSizes"}
         }
       }
     },
@@ -618,8 +616,8 @@
       "properties": {
         "spatial": {
           "type": "integer",
-          "description": "Spatial level. The frontend always emits 3 (dimension is partitioned across cores).",
-          "const": 3
+          "description": "Spatial level",
+          "minimum": 0
         },
         "temporal": {
           "type": "integer",
@@ -653,6 +651,7 @@
         "isPresent":    {"type": "integer", "enum": [0, 1], "description": "1 = tensor resides in this memory, 0 = absent"},
         "isPadded":     {"type": "integer", "enum": [0, 1], "description": "1 = allocation includes padding. See DimPaddingSizes for padding details."},
         "isZeroPadded": {"type": "integer", "enum": [0, 1], "description": "1 = padded region is zero-filled. Only meaningful when isPadded is 1."},
+        "dsOffset":     {"type": "integer", "description": "Byte offset of this tensor within its allocation. Set alongside allocateNode_."},
         "allocateNode_": {"type": "string", "description": "Name of the ScheduleTreeNode that allocates this tensor in this memory. Must match that node's name_ field."}
       },
       "additionalProperties": false
@@ -740,6 +739,11 @@
             }
           }
         },
+        "location": {
+          "type": "string",
+          "description": "Name of the loop the operation executes in. 'Inner' (the innermost loop) is the only supported value.",
+          "enum": ["Inner"]
+        },
         "inputLabeledDs": {
           "type": "array",
           "description": "Input tensor references from labeledDs_ using the '<dsName_>-idx<N>' naming convention.",
@@ -754,29 +758,34 @@
           "type": "array",
           "description": "Index tensors for indirect access operations (gather/scatter). See ScheduleTreeNode.indirectAllocType_.",
           "items": {"type": "string"}
+        },
+        "interimLabeledDs": {
+          "type": "array",
+          "description": "Intermediate tensors used within the operation, not exposed as inputs or outputs.",
+          "items": {"type": "string"}
         }
       },
       "additionalProperties": false
     },
     "DimPaddingSizes": {
       "type": "object",
-      "description": "Padding sizes for a single spatial dimension. See padding.md for full semantics and worked examples.",
+      "description": "Padding sizes for a single dimension.",
       "properties": {
-        "padFront_": {"type": "integer", "description": "Front padding elements (net, after unneeded reduction). Default 0. Set to -1 in dataStageParam_ entries only when the dimension is chunked across cores."},
-        "padBack_": {"type": "integer", "description": "Back padding elements (net, after unneeded reduction). Default 0. Set to -1 in dataStageParam_ entries only when the dimension is chunked across cores."},
-        "unneededPad_": {"type": "integer", "description": "Total unused elements at the tail of the allocated span (allocated_span - consumed_span). Counts both padding and real data; may exceed unneededPadFront_ + unneededPadBack_. See padding.md for the absorption algorithm."},
-        "unneededPadFront_": {"type": "integer", "description": "Portion of the unneeded slack absorbed from front padding. Rarely non-zero in practice."},
-        "unneededPadBack_": {"type": "integer", "description": "Portion of the unneeded slack absorbed from back padding."},
+        "padFront_": {"type": "integer", "description": "Front padding elements. Default 0."},
+        "padBack_": {"type": "integer", "description": "Back padding elements. Default 0."},
+        "unneededPad_": {"type": "integer", "description": "Total unneeded padding elements."},
+        "unneededPadFront_": {"type": "integer", "description": "Unneeded elements originating from padFront_."},
+        "unneededPadBack_": {"type": "integer", "description": "Unneeded elements originating from padBack_."},
         "totalSize_": {
-          "description": "Total input size inclusive of padding: (out - 1) * stride + kernel + unneededPad_. 'N/A' when windowDim_ is unset and padFront_ < 0. Full or per-core input span depending on location.",
+          "description": "Computed total padded size. The string 'N/A' when windowDim_ is unset and padFront_ < 0.",
           "oneOf": [
             {"type": "integer"},
             {"type": "string", "enum": ["N/A"]}
           ]
         },
-        "stride_": {"type": "integer", "minimum": 1, "description": "Stride applied with the operation. Default 1."},
-        "dilation_": {"type": "integer", "minimum": 1, "description": "Dilation applied with the operation. Default 1."},
-        "windowDim_": {"type": "string", "description": "Associated window primary dim name (e.g. 'ki', 'kj'). Uses primaryDimToString mapping."}
+        "stride_": {"type": "integer", "minimum": 1, "description": "Stride. Default 1."},
+        "dilation_": {"type": "integer", "minimum": 1, "description": "Dilation. Default 1."},
+        "windowDim_": {"type": "string", "description": "The reduction dimension this window is distributed over: 'ki' for a padded 'i', 'kj' for a padded 'j'. No trailing underscore.", "enum": ["ki", "kj"]}
       }
     },
     "SymbolicDimInfo": {
