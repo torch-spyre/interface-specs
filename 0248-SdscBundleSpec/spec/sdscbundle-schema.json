@@ -40,13 +40,6 @@
           "description": "Total number of cores used",
           "minimum": 1
         },
-        "dimToSymbolMappingOpcodeCorrection_": {
-          "type": "object",
-          "description": "Symbol mapping corrections for opcode generation",
-          "patternProperties": {
-            "^[A-Za-z_][A-Za-z0-9_]*$": {"type": "string"}
-          }
-        },
         "inputSymbolsAndTags_": {
           "type": "object",
           "description": "Input symbols and their associated tags",

@@ -40,7 +40,6 @@ Each entry in `dscs_` is a single-key object — the key is the operation name
   "coreFoldProp_":                         <FoldProperty>,
   "coreletFoldProp_":                      <FoldProperty>,
   "numCoresUsed_":                         <int>,
-  "dimToSymbolMappingOpcodeCorrection_":   <map<string, string>>,
   "inputSymbolsAndTags_":                  <map<string, string>>,
   "symbolDefinitions_":                    <object>,
   "coreIdToDsc_":                          <map<string, int>>,
@@ -63,7 +62,6 @@ Six fields are required. No additional properties are allowed.
 | `coreletFoldProp_` | [FoldProperty](foldproperty.md) | Yes | — | Fold factor and label for the corelet level of the memory hierarchy (e.g. `factor_: 1, label_: "corelet"`). |
 | `numCoresUsed_` | integer | Yes | >= 1 | Total number of Spyre cores used across all DSCs in this bundle. |
 | `debug_handle_` | DebugHandle or null | No† | — | Source-to-kernel provenance for this SuperDSC. Consumed by tooling that maps a compiled kernel back to its source; it does not affect compilation. Includes the source file/line (`source`), ATen op name (`aten_op`), lowering chain (`ir_chain`), fusion origins (`fused_from`), and rewrite history (`transform_history`). `null` is a normal value (not missing data) when provenance is unavailable. |
-| `dimToSymbolMappingOpcodeCorrection_` | map&lt;string, string&gt; | No | Keys: dim names | Symbol mapping corrections applied during opcode generation. Keys are dimension names; values are corrected symbol names. |
 | `inputSymbolsAndTags_` | map&lt;string, string&gt; | No | Keys: symbol names | Input symbols and their associated tags for symbolic dimension resolution. |
 | `symbolDefinitions_` | object | No | — | Variable definitions for symbolic dimensions used across the bundle. |
 | `coreIdToDsc_` | map&lt;string, integer&gt; | Yes | Keys: `^[0-9]+$`; values >= 0 | Maps each core ID (string integer) to a zero-based index into `dscs_`. Multiple cores with the same index share one `DesignSpaceConfig`. |
