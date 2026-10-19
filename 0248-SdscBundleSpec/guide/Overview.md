@@ -112,7 +112,7 @@ slices and DSC indices to cores:
 - Set `coreIdToDscSchedule`: for each core, one schedule tuple `[-1, 0, 0, 0]`
   covers the common case (single DSC, no data-op DSC, no barriers). The four integers are
   `[datadsc_idx, dldsc_idx, before_sync, after_sync]`:
-  - `datadsc_idx` = `-1` (default; index into `datadscs_`, or `-1` when no data DSC is attached)
+  - `datadsc_idx` = `-1` (no data-op DSC is attached)
   - `dldsc_idx` = `0` (zero-based index into `dscs_` for the executed `DesignSpaceConfig`)
   - `before_sync` = `0` (no barrier before step)
   - `after_sync` = `0` (no barrier after step)

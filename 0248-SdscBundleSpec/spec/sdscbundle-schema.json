@@ -65,11 +65,6 @@
             {"type": "null"}
           ]
         },
-        "datadscs_": {
-          "type": "array",
-          "description": "Data-operation descriptors (transpose, slice, ...) attached to this SuperDsc. Present only when symbolic dimensions are in use, and always as an empty array. Element contents are not specified here.",
-          "items": {"type": "object"}
-        },
         "coreIdToDsc_": {
           "type": "object",
           "description": "Mapping from core ID to DSC index",
