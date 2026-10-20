@@ -116,8 +116,8 @@ slices and DSC indices to cores:
   - `dldsc_idx` = `0` (zero-based index into `dscs_` for the executed `DesignSpaceConfig`)
   - `before_sync` = `0` (no barrier before step)
   - `after_sync` = `0` (no barrier after step)
-- (Optional) Populate `inputSymbolsAndTags_` and `symbolDefinitions_` when
-  symbolic dimensions are used.
+- (Optional) Populate `inputSymbolsAndTags_` when symbolic dimensions are
+  used.
 
 ### Step 3 — DesignSpaceConfig identity (inside dscs_)
 

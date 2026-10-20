@@ -43,7 +43,6 @@ Root Object (Dynamic operation name key, e.g. "exp", "matmul", "gelu")
      ├─── sdscFoldProps_: Array<FoldProperty>
      ├─── sdscFolds_: FoldManager
      ├─── inputSymbolsAndTags_: Object<symbol → string>
-     ├─── symbolDefinitions_: Object
      ├─── debug_handle_: DebugHandle | null
      │
      └─── dscs_: Array<WrappedDesignSpaceConfig> (required)
@@ -180,7 +179,7 @@ The root of the document is a single-key dictionary where the key is the operati
 - **Fold hierarchy**: `coreFoldProp_` specifies the core-level division factor (up to 32); `coreletFoldProp_` is emitted with factor 1 as a pass-through constant.
 - **Work division**: `numWkSlicesPerDim_` and `coreIdToWkSlice_` map loop dimensions (e.g. `mb`, `out`) across individual cores.
 - **Scheduling**: `coreIdToDsc_` maps each string core ID (`"0"`, `"1"`, …) to a zero-based index in `dscs_`. `coreIdToDscSchedule` assigns a 4-integer step tuple `[datadsc_idx, dldsc_idx, before_sync, after_sync]` per core.
-- **Symbolic registry**: Optional fields (`symbolDefinitions_`, `inputSymbolsAndTags_`) register dynamic runtime symbols.
+- **Symbolic registry**: The optional `inputSymbolsAndTags_` registers dynamic runtime symbols.
 
 ### 2. Wrapped DSC (`WrappedDesignSpaceConfig`)
 The `dscs_` array contains one or more `WrappedDesignSpaceConfig` entries. Each entry is a single-key object whose key is the sub-operation name and whose value is the [`DesignSpaceConfig`](designspaceconfig.md).

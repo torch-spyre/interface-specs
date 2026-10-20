@@ -47,10 +47,6 @@
             "^[A-Za-z_][A-Za-z0-9_]*$": {"type": "string"}
           }
         },
-        "symbolDefinitions_": {
-          "type": "object",
-          "description": "Variable definitions for symbolic dimensions"
-        },
         "debug_handle_": {
           "description": "Source-to-kernel provenance for this SuperDsc. null is a normal value, not missing data. Consumed by tooling that maps a compiled kernel back to its source; it does not affect compilation. See DebugHandle.",
           "oneOf": [
