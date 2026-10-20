@@ -710,11 +710,6 @@
             }
           }
         },
-        "location": {
-          "type": "string",
-          "description": "Name of the loop the operation executes in. 'Inner' (the innermost loop) is the only supported value.",
-          "enum": ["Inner"]
-        },
         "inputLabeledDs": {
           "type": "array",
           "description": "Input tensor references from labeledDs_ using the '<dsName_>-idx<N>' naming convention.",
