@@ -425,46 +425,6 @@
           "description": "Maximum combined symbolic volume for a set of symbolic dims. Keys are dim-set arrays encoded as strings (e.g. '[\"in_\",\"mb_\"]'); values are integer max volumes.",
           "additionalProperties": {"type": "integer"}
         },
-        "coreletSplit_": {
-          "type": "object",
-          "description": "Per-dimension explicit work split across corelets. Keys are primary dim names; values are arrays of integer work sizes, one entry per corelet.",
-          "patternProperties": {
-            "^[A-Za-z_][A-Za-z0-9_]*$": {
-              "type": "array",
-              "items": {"type": "integer"}
-            }
-          }
-        },
-        "rowSplit_": {
-          "type": "object",
-          "description": "Per-dimension, per-corelet explicit work split across PT rows. Keys are primary dim names; values are objects keyed by corelet id (numeric string) whose values are arrays of integer work sizes per PT row.",
-          "patternProperties": {
-            "^[A-Za-z_][A-Za-z0-9_]*$": {
-              "type": "object",
-              "patternProperties": {
-                "^[0-9]+$": {
-                  "type": "array",
-                  "items": {"type": "integer"}
-                }
-              }
-            }
-          }
-        },
-        "peSfpSplit_": {
-          "type": "object",
-          "description": "Per-dimension, per-corelet work split between PE and SFP components. Keys are primary dim names; values are objects keyed by corelet id (numeric string) whose values are objects mapping component name (e.g. 'pe', 'sfp') to integer work size.",
-          "patternProperties": {
-            "^[A-Za-z_][A-Za-z0-9_]*$": {
-              "type": "object",
-              "patternProperties": {
-                "^[0-9]+$": {
-                  "type": "object",
-                  "additionalProperties": {"type": "integer"}
-                }
-              }
-            }
-          }
-        },
         "paddingSizes_": {
           "type": "object",
           "description": "Per-dimension padding information for a windowed operation. Keyed by the padded output spatial dimension: 'i' or 'j'. Note the key carries no trailing underscore, unlike the dimension fields above.",

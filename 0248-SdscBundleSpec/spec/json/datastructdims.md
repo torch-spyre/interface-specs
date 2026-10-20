@@ -35,9 +35,6 @@ for this object.
   "y_":     <number>,
   "symbolicDimInfo_":  <map<string, SymbolicDimInfo>>,
   "maxSymbolicVolume_": <map<string, int>>,
-  "coreletSplit_":     <map<string, array<int>>>,
-  "rowSplit_":         <map<string, map<string, array<int>>>>,
-  "peSfpSplit_":       <map<string, map<string, map<string, int>>>>,
   "paddingSizes_":     <map<string, DimPaddingSizes>>
 }
 ```
@@ -73,9 +70,6 @@ These are always serialized (value `-1` when unset):
 | `paddingSizes_` | map&lt;string, DimPaddingSizes&gt; | Per-dimension padding information. Keys are dim names (e.g. `"i"`, `"j"`). See [Padding](padding.md). |
 | `symbolicDimInfo_` | map&lt;string, SymbolicDimInfo&gt; | Per-dimension symbolic size constraints. Keys are dimension names (e.g. `"mb_"`). See [SymbolicDimInfo](#symbolicdiminfo) below. |
 | `maxSymbolicVolume_` | map&lt;string, integer&gt; | Maximum combined symbolic volume for a set of dims. Keys are dim-set arrays encoded as strings (e.g. `'["in_","mb_"]'`). |
-| `coreletSplit_` | map&lt;string, array&lt;int&gt;&gt; | Explicit per-dimension work split across corelets. One integer per corelet. |
-| `rowSplit_` | map&lt;string, map&lt;string, array&lt;int&gt;&gt;&gt; | Per-dimension, per-corelet work split across PT rows. |
-| `peSfpSplit_` | map&lt;string, map&lt;string, map&lt;string, int&gt;&gt;&gt; | Per-dimension, per-corelet work split between PE and SFP components. |
 
 ---
 
