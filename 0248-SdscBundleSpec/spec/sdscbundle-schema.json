@@ -623,7 +623,6 @@
         "isPresent":    {"type": "integer", "enum": [0, 1], "description": "1 = tensor resides in this memory, 0 = absent"},
         "isPadded":     {"type": "integer", "enum": [0, 1], "description": "1 = allocation includes padding. See DimPaddingSizes for padding details."},
         "isZeroPadded": {"type": "integer", "enum": [0, 1], "description": "1 = padded region is zero-filled. Only meaningful when isPadded is 1."},
-        "dsOffset":     {"type": "integer", "description": "Byte offset of this tensor within its allocation. Set alongside allocateNode_."},
         "allocateNode_": {"type": "string", "description": "Name of the ScheduleTreeNode that allocates this tensor in this memory. Must match that node's name_ field."}
       },
       "additionalProperties": false
