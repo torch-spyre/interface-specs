@@ -302,18 +302,6 @@
           "description": "Index into constantInfo_ of the masking constant, or -1 when the operation has none. -1 is the default and the common case.",
           "minimum": -1
         },
-        "pdsRelation_": {
-          "type": "object",
-          "description": "Relationships between the primary data structures. Set for pool and window operations.",
-          "properties": {
-            "isPdsReuse": {
-              "type": "integer",
-              "enum": [0, 1],
-              "description": "1 = the input and output primary data structures share storage."
-            }
-          },
-          "additionalProperties": false
-        },
         "dataStageParam_": {
           "type": "object",
           "description": "Data staging parameters per core. Each value has ss_ (steady-state dimensions) and el_ (epilogue dimensions).",

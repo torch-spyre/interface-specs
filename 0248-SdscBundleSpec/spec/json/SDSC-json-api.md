@@ -57,7 +57,6 @@ Root Object (Dynamic operation name key, e.g. "exp", "matmul", "gelu")
                     ├─── dimToSymbolMapping_: Object<dimension → Array<string>>
                     ├─── coordinateMasking_: Object
                     ├─── maskingConstId_: integer
-                    ├─── pdsRelation_: Object
                     │
                     ├─── dataStageParam_: Object<stageId → Object>
                     │    ├─── name_: "core" | "corelet" | "row"
