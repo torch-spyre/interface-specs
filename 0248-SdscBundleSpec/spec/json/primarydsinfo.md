@@ -37,7 +37,7 @@ labels such as `INPUT`, `OUTPUT`, `KERNEL`, or `KERNEL_IDX`.
 
 | Field | Type | Required | Constraints | Description |
 |---|---|---|---|---|
-| `layoutDimOrder_` | array of string | No | Dimension names matching those declared in `DataStructDims` | Ordered list of dimension names describing how the tensor is laid out in memory, outermost first. |
+| `layoutDimOrder_` | array of string | No | Dimension names (`i`, `ij`, `in`, `j`, `ki`, `kij`, `kj`, `mb`, `out`, `x`, `x1`, `y`) matching those declared in `DataStructDims` | Ordered list of dimension names describing how the tensor is laid out in memory, outermost first. |
 | `stickDimOrder_` | array of string | No | MUST be a suffix subset of `layoutDimOrder_`; length MUST equal length of `stickSize_` | The innermost contiguous dimensions that form a stick — the atomic unit of storage transfer. |
 | `stickSize_` | array of integer | No | Each integer >= 1; parallel to `stickDimOrder_` | Size of each stick dimension in elements. Position `i` is the size of `stickDimOrder_[i]`. |
 | `stickRepl_` | array of integer | No | Each integer >= 1; parallel to `stickDimOrder_` | Per-stick-dimension replication counts. Set for pool and window operations. Defaults to all-ones when absent. |

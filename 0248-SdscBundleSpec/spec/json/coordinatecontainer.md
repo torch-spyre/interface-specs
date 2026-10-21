@@ -35,7 +35,7 @@ It groups the coordinate info for all dimensions of a tensor alongside the core-
 
 | Field | Type | Required | Constraints | Description |
 |---|---|---|---|---|
-| `coordInfo` | `map<string, CoordinateInfo>` | No | Keys: `^[a-z_][a-z0-9_]*$` | Per-dimension coordinate information. Keys are dimension names (e.g. `mb`, `kb`). See [CoordinateInfo](coordinateinfo.md). |
+| `coordInfo` | `map<string, CoordinateInfo>` | No | Keys: a dimension name (`i`, `ij`, `in`, `j`, `ki`, `kij`, `kj`, `mb`, `out`, `x`, `x1`, `y`) | Per-dimension coordinate information. Keys are dimension names (e.g. `mb`, `out`). See [CoordinateInfo](coordinateinfo.md). |
 | `coreIdToWkSlice_` | `object` | No | Outer keys: string integers (core IDs) | Maps each core ID to a map of dimension name → work slice index assigned to that core for that dimension. |
 
 ## Example

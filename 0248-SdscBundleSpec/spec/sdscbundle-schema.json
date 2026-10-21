@@ -67,11 +67,10 @@
         "numWkSlicesPerDim_": {
           "type": "object",
           "description": "Number of work slices per dimension",
-          "patternProperties": {
-            "^[A-Za-z_][A-Za-z0-9_]*$": {
-              "type": "integer",
-              "minimum": 1
-            }
+          "propertyNames": {"$ref": "#/$defs/PrimaryDim"},
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
           }
         },
         "coreIdToWkSlice_": {
@@ -80,11 +79,10 @@
           "patternProperties": {
             "^[0-9]+$": {
               "type": "object",
-              "patternProperties": {
-                "^[A-Za-z_][A-Za-z0-9_]*$": {
-                  "type": "integer",
-                  "minimum": 0
-                }
+              "propertyNames": {"$ref": "#/$defs/PrimaryDim"},
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 0
               }
             }
           }
@@ -286,16 +284,16 @@
         "dimToSymbolMapping_": {
           "type": "object",
           "description": "Mapping from dimensions to symbolic variables",
-          "patternProperties": {
-            "^[A-Za-z_][A-Za-z0-9_]*$": {
-              "type": "array",
-              "items": {"type": "string"}
-            }
+          "propertyNames": {"$ref": "#/$defs/PrimaryDim"},
+          "additionalProperties": {
+            "type": "array",
+            "items": {"type": "string"}
           }
         },
         "coordinateMasking_": {
           "type": "object",
-          "description": "Coordinate masking configuration for masked operations."
+          "description": "Coordinate masking configuration for masked operations. Keyed by dimension; the values are not modelled here.",
+          "propertyNames": {"$ref": "#/$defs/PrimaryDim"}
         },
         "maskingConstId_": {
           "type": "integer",
@@ -338,12 +336,12 @@
                 "layoutDimOrder_": {
                   "type": "array",
                   "description": "Ordered list of dimension names describing how the tensor is laid out in memory, outermost first. Dimension names must match those declared in DataStructDims.",
-                  "items": {"type": "string"}
+                  "items": {"$ref": "#/$defs/PrimaryDim"}
                 },
                 "stickDimOrder_": {
                   "type": "array",
                   "description": "The innermost contiguous dimensions that form a stick — the atomic unit of storage transfer. Must be a suffix subset of layoutDimOrder_. Parallel to stickSize_.",
-                  "items": {"type": "string"}
+                  "items": {"$ref": "#/$defs/PrimaryDim"}
                 },
                 "stickSize_": {
                   "type": "array",
@@ -413,12 +411,9 @@
         "y_": {"type": "number", "description": "Kernel reuse dimension (e.g. timestep). -1 = unset."},
         "symbolicDimInfo_": {
           "type": "object",
-          "description": "Per-dimension symbolic size info. Keys are primary dim names (e.g. 'in_', 'mb_'); values are SymbolicDimInfo objects.",
-          "patternProperties": {
-            "^[A-Za-z_][A-Za-z0-9_]*$": {
-              "$ref": "#/$defs/SymbolicDimInfo"
-            }
-          }
+          "description": "Per-dimension symbolic size info. Keys are primary dim names (e.g. 'in', 'mb'); values are SymbolicDimInfo objects.",
+          "propertyNames": {"$ref": "#/$defs/PrimaryDim"},
+          "additionalProperties": {"$ref": "#/$defs/SymbolicDimInfo"}
         },
         "maxSymbolicVolume_": {
           "type": "object",
@@ -464,7 +459,7 @@
         "layoutDimOrder_": {
           "type": "array",
           "description": "Physical memory layout order for this allocation, outermost first. Overrides the global primaryDsInfo_ layout when present.",
-          "items": {"type": "string"}
+          "items": {"$ref": "#/$defs/PrimaryDim"}
         },
         "maxDimSizes_": {
           "type": "array",
@@ -492,18 +487,22 @@
         "backGapCore_": {
           "type": "object",
           "description": "Back-gap size in elements, per dimension per core. Outer key is a dimension name; inner key is a core ID as a decimal string; value is the gap size as a decimal string.",
-          "patternProperties": {
-            "^[A-Za-z_][A-Za-z0-9_]*$": {
-              "type": "object",
-              "patternProperties": {
-                "^-?[0-9]+$": {"type": "string"}
-              }
+          "propertyNames": {"$ref": "#/$defs/PrimaryDim"},
+          "additionalProperties": {
+            "type": "object",
+            "patternProperties": {
+              "^-?[0-9]+$": {"type": "string"}
             }
           }
         },
         "padding_": {
           "type": "object",
-          "description": "Padding parameters for this allocation. Set when the tensor requires memory padding beyond its logical size."
+          "description": "Padding type per dimension for this allocation. Set when the tensor requires memory padding beyond its logical size.",
+          "propertyNames": {"$ref": "#/$defs/PrimaryDim"},
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["nopad", "lowered_padded", "padded_nozeropad", "padded_wzeropad", "padded_fullspan", "padded_fullspan_wunneeded"]
+          }
         },
         "indirectAllocType_": {
           "type": "string",
@@ -525,12 +524,9 @@
           "properties": {
             "coordInfo": {
               "type": "object",
-              "description": "Per-dimension coordinate information. Keys are dimension names (pattern ^[a-z_][a-z0-9_]*$). Each value is a CoordinateInfo object.",
-              "patternProperties": {
-                "^[a-z_][a-z0-9_]*$": {
-                  "$ref": "#/$defs/CoordinateInfo"
-                }
-              }
+              "description": "Per-dimension coordinate information. Keys are dimension names. Each value is a CoordinateInfo object.",
+              "propertyNames": {"$ref": "#/$defs/PrimaryDim"},
+              "additionalProperties": {"$ref": "#/$defs/CoordinateInfo"}
             },
             "coreIdToWkSlice_": {
               "type": "object",
@@ -713,6 +709,11 @@
         "dilation_": {"type": "integer", "minimum": 1, "description": "Dilation. Default 1."},
         "windowDim_": {"type": "string", "description": "The reduction dimension this window is distributed over: 'ki' for a padded 'i', 'kj' for a padded 'j'. No trailing underscore.", "enum": ["ki", "kj"]}
       }
+    },
+    "PrimaryDim": {
+      "type": "string",
+      "description": "A primary dimension name, wherever one is a map key or an array element. No trailing underscore: 'mb', not 'mb_' -- the dimension fields of DataStructDims carry one, these names do not.",
+      "enum": ["i", "ij", "in", "j", "ki", "kij", "kj", "mb", "out", "x", "x1", "y"]
     },
     "SymbolicDimInfo": {
       "type": "object",
