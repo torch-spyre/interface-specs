@@ -33,15 +33,9 @@ An SDSC JSON file is structured as a single top-level key (the dynamic operation
 Root Object (Dynamic operation name key, e.g. "exp", "matmul", "gelu")
 │
 └─── SuperDSC (Bundle-level configuration)
-     ├─── coreFoldProp_: FoldProperty (required)
-     ├─── coreletFoldProp_: FoldProperty (required)
      ├─── numCoresUsed_: integer (required)
-     ├─── coreIdToDsc_: Object<coreId → dscIndex> (required)
-     ├─── coreIdToDscSchedule: Object<coreId → Array<[datadsc_idx, dldsc_idx, before_sync, after_sync]>> (required)
      ├─── numWkSlicesPerDim_: Object<dimension → sliceCount>
      ├─── coreIdToWkSlice_: Object<coreId → Object<dimension → sliceIndex>>
-     ├─── sdscFoldProps_: Array<FoldProperty>
-     ├─── sdscFolds_: FoldManager
      ├─── inputSymbolsAndTags_: Object<symbol → string>
      ├─── debug_handle_: DebugHandle | null
      │
@@ -175,13 +169,11 @@ Below is the complete index of all 16 specification documents governing the SDSC
 
 ### 1. Root Key and Bundle-Level Structure (`SuperDsc`)
 The root of the document is a single-key dictionary where the key is the operation name string (e.g., `"matmul"`, `"conv2d"`), matching regex `^[a-zA-Z0-9_/\-][a-zA-Z0-9_/\-]*$`. Its value is the [`SuperDsc`](superdsc-object.md) object.
-- **Fold hierarchy**: `coreFoldProp_` specifies the core-level division factor (up to 32); `coreletFoldProp_` is emitted with factor 1 as a pass-through constant.
 - **Work division**: `numWkSlicesPerDim_` and `coreIdToWkSlice_` map loop dimensions (e.g. `mb`, `out`) across individual cores.
-- **Scheduling**: `coreIdToDsc_` maps each string core ID (`"0"`, `"1"`, …) to a zero-based index in `dscs_`. `coreIdToDscSchedule` assigns a 4-integer step tuple `[datadsc_idx, dldsc_idx, before_sync, after_sync]` per core.
 - **Symbolic registry**: The optional `inputSymbolsAndTags_` registers dynamic runtime symbols.
 
 ### 2. Wrapped DSC (`WrappedDesignSpaceConfig`)
-The `dscs_` array contains one or more `WrappedDesignSpaceConfig` entries. Each entry is a single-key object whose key is the sub-operation name and whose value is the [`DesignSpaceConfig`](designspaceconfig.md).
+The `dscs_` array contains exactly one `WrappedDesignSpaceConfig` entry: a single-key object whose key is the sub-operation name and whose value is the [`DesignSpaceConfig`](designspaceconfig.md). Every core listed in its `coreIdsUsed_` runs it.
 - **Core allocation**: `numCoresUsed_` and `coreIdsUsed_` record the active cores for this compute phase.
 - **Global problem geometry**: `N_` ([`DataStructDims`](datastructdims.md)) holds the un-tiled problem dimensions. Inactive dimensions are set to `-1`. Symbolic dimensions are set to `-1` and referenced in `dimToSymbolMapping_`.
 
@@ -227,13 +219,18 @@ An array of [`ComputeOperation`](computeoperation.md) entries specifying executi
 Any frontend producer emitting SDSC JSON (such as `torch-spyre`) MUST adhere to the following structural conventions:
 
 1. **Root Key & Wrapper Key Pattern**: The top-level root key and the `dscs_` wrapper keys MUST match `^[a-zA-Z0-9_/\-][a-zA-Z0-9_/\-]*$`.
-2. **String-Integer Map Keys vs. Integer Arrays**: In map structures (such as `coreIdToDsc_`, `coreIdToWkSlice_`, `coreIdToDscSchedule`, `constantInfo_`, `dataStageParam_`), core IDs and sequence indices MUST be string-encoded integers (e.g. `"0"`, `"1"`). In array structures (such as `coreIdsUsed_`), core IDs MUST be literal integers (`0`, `1`).
-3. **Sentinel Values (`-1`)**: Inactive dimension fields in `N_`, unset staging dimensions, unbound dimensions in `maxDimSizes_`, and the default `datadsc_idx` in `coreIdToDscSchedule` all use `-1` as the sentinel value.
+2. **String-Integer Map Keys vs. Integer Arrays**: In map structures (such as `coreIdToWkSlice_`, `constantInfo_`, `dataStageParam_`), core IDs and sequence indices MUST be string-encoded integers (e.g. `"0"`, `"1"`). In array structures (such as `coreIdsUsed_`), core IDs MUST be literal integers (`0`, `1`).
+3. **Sentinel Values (`-1`)**: Inactive dimension fields in `N_`, unset staging dimensions, and unbound dimensions in `maxDimSizes_` use `-1` as the sentinel value.
 4. **Empty Structures**:
    - `constantInfo_` uses the string `"{}"` when no constants are present.
-5. **Pass-Through Constants**: Because `torch-spyre` partitions work at the core level and leaves corelet splitting to DeepTools, frontend-emitted artifacts set `coreletFoldProp_` to `{"factor_": 1, "label_": "corelet"}` and `numCoreletsUsed_` to `1`.
-6. **Schedule Step Tuple**: Each core schedule entry in `coreIdToDscSchedule` MUST be an array of exactly 4 integers `[datadsc_idx, dldsc_idx, before_sync, after_sync]`. Common single-DSC default is `[-1, 0, 0, 0]`.
-7. **Strict Schema Conformance**: All objects have `additionalProperties: false`. No extra or undeclared fields may be included.
+5. **Strict Schema Conformance**: All objects have `additionalProperties: false`. No extra or undeclared fields may be included.
+
+### Constraints the schema cannot express
+
+These relate values across the document, which JSON Schema cannot check. A document can pass the schema and still violate them; DeepTools rejects it.
+
+1. **Core fold present**: At least one [`FoldManager`](foldmanager.md) in each `DesignSpaceConfig` MUST name a `core` dimension in its `dim_prop_attr`. Its `factor_` is the number of cores on the system the bundle was compiled for — not `numCoresUsed_`, the number in use — and DeepTools derives the bundle's core fold from it. In practice every `startAddressCoreCorelet_` carries one.
+2. **Fold factors agree**: Every `FoldManager` in a `DesignSpaceConfig` that names a `core` dimension MUST give it the same `factor_`. The same holds for `corelet`.
 
 ---
 

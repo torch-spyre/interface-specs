@@ -13,11 +13,10 @@ values, keyed by fold-coordinate tuples like `"[0, 1]"`.
 
 ## Where Folding Appears
 
-`FoldManager` is used in five places across the schema:
+`FoldManager` is used in four places across the schema:
 
 | Parent field | Purpose |
 |---|---|
-| `SuperDsc.sdscFolds_` | Bundle-level fold addresses / mappings |
 | `ScheduleTreeNode.startAddressCoreCorelet_` | Per-core tensor start addresses |
 | `CoordinateInfo.folds` | Per-dimension coordinate computation |
 | `ConstantInfo.data_` | Per-core constant values |
@@ -25,6 +24,11 @@ values, keyed by fold-coordinate tuples like `"[0, 1]"`.
 
 For details on how `startAddressCoreCorelet_` and `coordinates_` are filled in
 practice, see [ScheduleTreeNode](scheduletreenode.md).
+
+A `DesignSpaceConfig` MUST carry at least one `FoldManager` with a `core`
+dimension, and every `core` dimension in it MUST have the same `factor_` (the
+system core count); likewise `corelet`. See
+[Constraints the schema cannot express](SDSC-json-api.md#constraints-the-schema-cannot-express).
 
 ## Structure
 

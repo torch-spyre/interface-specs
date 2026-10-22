@@ -4,15 +4,13 @@ A `DesignSpaceConfig` (DSC) is the complete description of a single compute
 configuration executed by one or more Spyre cores. It holds the total tensor
 dimensions, the tensor descriptors, the memory allocation schedule, and the
 compute operations to perform. The [`SuperDsc`](superdsc-object.md) object
-wraps one or more DSCs in its `dscs_` array — typically one per operation,
-with multiple entries only when work is unevenly divided across cores.
+wraps exactly one DSC in its `dscs_` array, and every core listed in its
+`coreIdsUsed_` runs it.
 
 ## Context
 
 Each `DesignSpaceConfig` is the value inside a single-key
-`{"<op_name>": <DesignSpaceConfig>}` entry in `SuperDsc.dscs_`. The
-`coreIdToDsc_` map in `SuperDsc` assigns each core a zero-based index into
-that array, determining which DSC each core executes.
+`{"<op_name>": <DesignSpaceConfig>}` entry in `SuperDsc.dscs_`.
 
 ```json
 "dscs_": [

@@ -16,25 +16,8 @@
     "SuperDsc": {
       "type": "object",
       "description": "Bundle-level configuration for multi-core accelerator operation.",
-      "required": ["coreFoldProp_", "coreletFoldProp_", "numCoresUsed_", "coreIdToDsc_", "coreIdToDscSchedule", "dscs_"],
+      "required": ["numCoresUsed_", "dscs_"],
       "properties": {
-        "sdscFoldProps_": {
-          "type": "array",
-          "description": "SDSC-level fold properties",
-          "items": {"$ref": "#/$defs/FoldProperty"}
-        },
-        "sdscFolds_": {
-          "$ref": "#/$defs/FoldManager",
-          "description": "SDSC-level fold manager"
-        },
-        "coreFoldProp_": {
-          "$ref": "#/$defs/FoldProperty",
-          "description": "Core fold properties"
-        },
-        "coreletFoldProp_": {
-          "$ref": "#/$defs/FoldProperty",
-          "description": "Corelet fold properties"
-        },
         "numCoresUsed_": {
           "type": "integer",
           "description": "Total number of cores used",
@@ -53,16 +36,6 @@
             {"$ref": "#/$defs/DebugHandle"},
             {"type": "null"}
           ]
-        },
-        "coreIdToDsc_": {
-          "type": "object",
-          "description": "Mapping from core ID to DSC index",
-          "patternProperties": {
-            "^[0-9]+$": {
-              "type": "integer",
-              "minimum": 0
-            }
-          }
         },
         "numWkSlicesPerDim_": {
           "type": "object",
@@ -87,26 +60,11 @@
             }
           }
         },
-        "coreIdToDscSchedule": {
-          "type": "object",
-          "description": "Per-core execution schedule. Each value is an array of step tuples [datadsc_idx, dldsc_idx, before_sync, after_sync]: data DSC index, data-load DSC index, barrier before step (0=none), barrier after step (0=none).",
-          "patternProperties": {
-            "^[0-9]+$": {
-              "type": "array",
-              "items": {
-                "type": "array",
-                "description": "Step tuple: [datadsc_idx, dldsc_idx, before_sync, after_sync]",
-                "minItems": 4,
-                "maxItems": 4,
-                "items": {"type": "integer"}
-              }
-            }
-          }
-        },
         "dscs_": {
           "type": "array",
-          "description": "Array of Design Space Configurations",
+          "description": "The bundle's Design Space Configuration, as a one-element array. Every core in its coreIdsUsed_ runs it.",
           "minItems": 1,
+          "maxItems": 1,
           "items": {"$ref": "#/$defs/WrappedDesignSpaceConfig"}
         }
       },
@@ -182,7 +140,7 @@
     },
     "FoldProperty": {
       "type": "object",
-      "description": "Pairs a fold factor with a memory hierarchy level label. Used in SuperDsc (coreFoldProp_, coreletFoldProp_, sdscFoldProps_) and FoldManager (dim_prop_attr) to describe how data is partitioned across cores, corelets, and time steps.",
+      "description": "Pairs a fold factor with a memory hierarchy level label. Used in FoldManager (dim_prop_attr) to describe how data is partitioned across cores, corelets, and time steps.",
       "required": ["factor_", "label_"],
       "properties": {
         "factor_": {
@@ -199,7 +157,7 @@
     },
     "FoldManager": {
       "type": "object",
-      "description": "Encodes a multi-dimensional fold expression mapping loop index tuples (core, corelet, time step) to concrete values (addresses, coordinates, constants). Used in SuperDsc.sdscFolds_, ScheduleTreeNode.startAddressCoreCorelet_, CoordinateInfo.folds, and ConstantInfo.data_.",
+      "description": "Encodes a multi-dimensional fold expression mapping loop index tuples (core, corelet, time step) to concrete values (addresses, coordinates, constants). Used in ScheduleTreeNode.startAddressCoreCorelet_, CoordinateInfo.folds, and ConstantInfo.data_.",
       "required": ["dim_prop_func", "dim_prop_attr"],
       "properties": {
         "dim_prop_func": {

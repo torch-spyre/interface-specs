@@ -13,9 +13,9 @@ Each SuperDSC-Bundle is compiled by **DeepTools** to generate the assembly code 
 
 *Figure 1: High-Level View of SuperDSC-Bundle API within torch-spyre stack*
 
-SuperDSC is a self-contained compiled artifact that describes everything the Spyre hardware needs to execute a single scheduled operation deterministically. The top-level structure contains core fold properties, work-slice mappings, and a per-core execution schedule. A `dscs_` array holds one or more DesignSpaceConfig entries. Each entry is a complete description of one compute configuration, and contains the following elements.
+SuperDSC is a self-contained compiled artifact that describes everything the Spyre hardware needs to execute a single scheduled operation deterministically. The top-level structure contains work-slice mappings and a per-core execution schedule. A `dscs_` array holds one or more DesignSpaceConfig entries. Each entry is a complete description of one compute configuration, and contains the following elements.
 
-- **Core fold properties** (`coreFoldProp_`, `numWkSlicesPerDim_`, `coreIdToWkSlice_`): how to divide the iteration space across cores. Any operation can use up to 32 cores — the current core count on Spyre, though this limit may increase in future hardware generations. For a tensor of shape (1024, 256), this encodes how many rows each core processes. The encoding gives each core an equal number of sticks and keeps each core within its addressable device memory limit.
+- **Core work division** (`numWkSlicesPerDim_`, `coreIdToWkSlice_`): how to divide the iteration space across cores. Any operation can use up to 32 cores — the current core count on Spyre, though this limit may increase in future hardware generations. For a tensor of shape (1024, 256), this encodes how many rows each core processes. The encoding gives each core an equal number of sticks and keeps each core within its addressable device memory limit.
 - **Tensor descriptors** (`labeledDs_`, `primaryDsInfo_`): for each tensor argument, the tiling structure defines which dimensions are stick dimensions, how the host-side shape maps to device-side tiles, memory residency (HBM vs. LX scratchpad), data format, and which dimensions each tensor iterates over fully vs. which are summed over (contracted) as in the K dimension of a matmul.
 - **Schedule tree** (`scheduleTree_`): a list of allocate nodes (one per tensor) that specify memory placement (HBM or LX scratchpad), dimension ordering, per-core start addresses via fold mappings, and coordinate information encoding how each dimension is split across cores with affine transformations.
 - **Data staging** (`dataStageParam_`): per-core dimension sizes for steady-state and epilogue passes, describing how data is partitioned for transfer into scratchpad.
@@ -74,8 +74,8 @@ appear in the schema, finishing with the deepest leaf objects.
 
 | Step | Object / Field | Hierarchy level |
 |---|---|---|
-| 1 | Root key · `SuperDsc`: `coreFoldProp_`, `coreletFoldProp_`, `numCoresUsed_` | Root → SuperDSC |
-| 2 | `SuperDsc`: `numWkSlicesPerDim_`, `coreIdToWkSlice_`, `coreIdToDsc_`, `coreIdToDscSchedule` | SuperDSC |
+| 1 | Root key · `SuperDsc`: `numCoresUsed_` | Root → SuperDSC |
+| 2 | `SuperDsc`: `numWkSlicesPerDim_`, `coreIdToWkSlice_` | SuperDSC |
 | 3 | `dscs_` entry · `DesignSpaceConfig`: `numCoresUsed_`, `coreIdsUsed_` | SuperDSC → DSC |
 | 4 | `DesignSpaceConfig`: `N_`, `dataStageParam_` | DSC |
 | 5 | `DesignSpaceConfig`: `primaryDsInfo_` | DSC |
@@ -84,38 +84,23 @@ appear in the schema, finishing with the deepest leaf objects.
 | 8 | `DesignSpaceConfig`: `constantInfo_` → `ConstantInfo` | DSC |
 | 9 | `DesignSpaceConfig`: `computeOp_` → `ComputeOperation` | DSC (last leaf) |
 
-### Step 1 — Root key and SuperDSC fold properties
+### Step 1 — Root key and SuperDSC core count
 
 Create the root object with a single key — the operation name string
 (pattern `^[a-zA-Z0-9_/\-][a-zA-Z0-9_/\-]*$`). Its value is the
-[`SuperDsc`](/0248-SdscBundleSpec/spec/json/superdsc-object.md) object. Fill the fold properties first, as
-every [`FoldManager`](/0248-SdscBundleSpec/spec/json/foldmanager.md) used later inherits from these:
+[`SuperDsc`](/0248-SdscBundleSpec/spec/json/superdsc-object.md) object.
 
-- Set `coreFoldProp_.factor_` to a value between 1 and the maximum number of cores
-  in use (e.g. `32` for a full-chip bundle, or `2` for a 2-core bundle). Set `label_` to `"core"`.
-- Set `coreletFoldProp_.factor_` to `1`; corelet splitting is left to DeepTools. Set `label_` to `"corelet"`.
-- Set `numCoresUsed_` to the total number of cores.
-- (Optional) Set `sdscFoldProps_` and `sdscFolds_` only when bundle-level fold
-  dimensions above the core level are required.
+- Set `numCoresUsed_` to the total number of cores in use.
 
 ### Step 2 — SuperDSC work-division maps
 
 Still in [`SuperDsc`](/0248-SdscBundleSpec/spec/json/superdsc-object.md), fill the maps that assign work
-slices and DSC indices to cores:
+slices to cores:
 
 - Set `numWkSlicesPerDim_`: for each dimension being split across cores, record
   the total number of slices (e.g. `{"mb": 2}` for a 2-way minibatch split).
 - Set `coreIdToWkSlice_`: for each core ID, map each split dimension to the
   slice index that core handles (e.g. `{"0": {"mb": 0}, "1": {"mb": 1}}`).
-- Set `coreIdToDsc_`: map each core ID (as a string integer) to its zero-based
-  index into `dscs_`. All cores typically map to `0` when work is balanced.
-- Set `coreIdToDscSchedule`: for each core, one schedule tuple `[-1, 0, 0, 0]`
-  covers the common case (single DSC, no data-op DSC, no barriers). The four integers are
-  `[datadsc_idx, dldsc_idx, before_sync, after_sync]`:
-  - `datadsc_idx` = `-1` (no data-op DSC is attached)
-  - `dldsc_idx` = `0` (zero-based index into `dscs_` for the executed `DesignSpaceConfig`)
-  - `before_sync` = `0` (no barrier before step)
-  - `after_sync` = `0` (no barrier after step)
 - (Optional) Populate `inputSymbolsAndTags_` when symbolic dimensions are
   used.
 
@@ -125,8 +110,7 @@ Add one entry to `dscs_` — a single-key object `{"<op_name>": <DesignSpaceConf
 Inside the [`DesignSpaceConfig`](/0248-SdscBundleSpec/spec/json/designspaceconfig.md), set the core identity
 fields first, as they are referenced by the data-staging and tensor steps below:
 
-- Set `numCoresUsed_` and `coreIdsUsed_` to match the cores assigned to this
-  DSC via `coreIdToDsc_` in Step 2.
+- Set `numCoresUsed_` and `coreIdsUsed_` for this DSC.
 
 ### Step 4 — Total operation dimensions (N_) and data staging (dataStageParam_)
 
