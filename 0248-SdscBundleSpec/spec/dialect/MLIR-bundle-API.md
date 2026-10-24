@@ -136,8 +136,6 @@ On the **JSON side**, symbolic dimension sizes are expressed by:
   `granularity_` (the step the runtime value is a multiple of).
 - [`DataStructDims.maxSymbolicVolume_`](../json/datastructdims.md) — caps the combined
   volume across a set of symbolic dimensions.
-- [`SuperDsc.inputSymbolsAndTags_`](../json/superdsc-object.md) — top-level
-  symbol registry at the `SuperDsc` level.
 
 On the **MLIR side**, the runtime value for each symbolic dimension size is
 also supplied as an operand to `sdscbundle.sdsc_execute` via `symbol_ids`,

@@ -101,8 +101,6 @@ slices to cores:
   the total number of slices (e.g. `{"mb": 2}` for a 2-way minibatch split).
 - Set `coreIdToWkSlice_`: for each core ID, map each split dimension to the
   slice index that core handles (e.g. `{"0": {"mb": 0}, "1": {"mb": 1}}`).
-- (Optional) Populate `inputSymbolsAndTags_` when symbolic dimensions are
-  used.
 
 ### Step 3 — DesignSpaceConfig identity (inside dscs_)
 

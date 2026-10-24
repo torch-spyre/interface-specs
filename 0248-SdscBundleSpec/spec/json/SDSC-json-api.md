@@ -36,7 +36,6 @@ Root Object (Dynamic operation name key, e.g. "exp", "matmul", "gelu")
      ├─── numCoresUsed_: integer (required)
      ├─── numWkSlicesPerDim_: Object<dimension → sliceCount>
      ├─── coreIdToWkSlice_: Object<coreId → Object<dimension → sliceIndex>>
-     ├─── inputSymbolsAndTags_: Object<symbol → string>
      ├─── debug_handle_: DebugHandle | null
      │
      └─── dscs_: Array<WrappedDesignSpaceConfig> (required)
@@ -170,7 +169,6 @@ Below is the complete index of all 16 specification documents governing the SDSC
 ### 1. Root Key and Bundle-Level Structure (`SuperDsc`)
 The root of the document is a single-key dictionary where the key is the operation name string (e.g., `"matmul"`, `"conv2d"`), matching regex `^[a-zA-Z0-9_/\-][a-zA-Z0-9_/\-]*$`. Its value is the [`SuperDsc`](superdsc-object.md) object.
 - **Work division**: `numWkSlicesPerDim_` and `coreIdToWkSlice_` map loop dimensions (e.g. `mb`, `out`) across individual cores.
-- **Symbolic registry**: The optional `inputSymbolsAndTags_` registers dynamic runtime symbols.
 
 ### 2. Wrapped DSC (`WrappedDesignSpaceConfig`)
 The `dscs_` array contains exactly one `WrappedDesignSpaceConfig` entry: a single-key object whose key is the sub-operation name and whose value is the [`DesignSpaceConfig`](designspaceconfig.md). Every core listed in its `coreIdsUsed_` runs it.

@@ -30,7 +30,6 @@ Each entry in `dscs_` is a single-key object — the key is the operation name
 ```json
 {
   "numCoresUsed_":                         <int>,
-  "inputSymbolsAndTags_":                  <map<string, string>>,
   "numWkSlicesPerDim_":                    <map<string, int>>,
   "coreIdToWkSlice_":                      <map<string, map<string, int>>>,
   "dscs_":                                 [<WrappedDesignSpaceConfig>]
@@ -45,7 +44,6 @@ Two fields are required. No additional properties are allowed.
 |---|---|---|---|---|
 | `numCoresUsed_` | integer | Yes | >= 1 | Total number of Spyre cores used across all DSCs in this bundle. |
 | `debug_handle_` | DebugHandle or null | No† | — | Source-to-kernel provenance for this SuperDSC. Consumed by tooling that maps a compiled kernel back to its source; it does not affect compilation. Includes the source file/line (`source`), ATen op name (`aten_op`), lowering chain (`ir_chain`), fusion origins (`fused_from`), and rewrite history (`transform_history`). `null` is a normal value (not missing data) when provenance is unavailable. |
-| `inputSymbolsAndTags_` | map&lt;string, string&gt; | No | Keys: symbol names | Input symbols and their associated tags for symbolic dimension resolution. |
 | `numWkSlicesPerDim_` | map&lt;string, integer&gt; | No | Keys: dim names; values >= 1 | Total number of work slices per dimension across all cores. |
 | `coreIdToWkSlice_` | map&lt;string, map&lt;string, integer&gt;&gt; | No | Outer keys: core IDs; inner keys: dim names; values >= 0 | Maps each core ID to a map of dimension name → work slice index assigned to that core. |
 | `dscs_` | array of object | Yes | exactly 1 item | The bundle's Design Space Configuration, as a one-element array. The entry is a single-key object `{"<op_name>": <DesignSpaceConfig>}` — see [`DesignSpaceConfig`](designspaceconfig.md). Every core listed in its `coreIdsUsed_` runs it. |
