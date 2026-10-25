@@ -90,8 +90,8 @@ Root Object (Dynamic operation name key, e.g. "exp", "matmul", "gelu")
                     │         ├─── wordLength: number (>0; fractional for sub-byte types)
                     │         ├─── dataFormat_: string (required)
                     │         └─── memOrg_: MemoryOrganization (required)
-                    │              ├─── hbm: MemorySlot (isPresent, isPadded, isZeroPadded, allocateNode_)
-                    │              └─── lx: MemorySlot (isPresent, isPadded, isZeroPadded, allocateNode_)
+                    │              ├─── hbm: MemorySlot (isPresent, isPadded, isZeroPadded)
+                    │              └─── lx: MemorySlot (isPresent, isPadded, isZeroPadded)
                     │
                     ├─── constantInfo_: Object<index → ConstantInfo> | string "{}"
                     │    └─── ConstantInfo

@@ -27,14 +27,12 @@ with whichever memory key has `"isPresent": 1` here.
   "hbm": {
     "isPresent":    0 | 1,
     "isPadded":     0 | 1,
-    "isZeroPadded": 0 | 1,
-    "allocateNode_": "<string>"
+    "isZeroPadded": 0 | 1
   },
   "lx": {
     "isPresent":    0 | 1,
     "isPadded":     0 | 1,
-    "isZeroPadded": 0 | 1,
-    "allocateNode_": "<string>"
+    "isZeroPadded": 0 | 1
   }
 }
 ```
@@ -50,12 +48,10 @@ Both `hbm` and `lx` are optional keys; omitting a key is equivalent to
 | `hbm.isPresent` | integer | Yes (if `hbm` present) | 0 or 1 | 1 = tensor resides in HBM. MUST match `component_: "hbm"` in the corresponding `ScheduleTreeNode`. |
 | `hbm.isPadded` | integer | No | 0 or 1 | 1 = HBM allocation includes padding. See [Padding](padding.md). |
 | `hbm.isZeroPadded` | integer | No | 0 or 1 | 1 = padded region in HBM is zero-filled. Only meaningful when `isPadded: 1`. |
-| `hbm.allocateNode_` | string | No | MUST match a `ScheduleTreeNode.name_` | Name of the `ScheduleTreeNode` that allocates this tensor in HBM. |
 | `lx` | object | No | — | LX per-core local scratchpad slot. Omit or set `isPresent: 0` when the tensor is not in LX. |
 | `lx.isPresent` | integer | Yes (if `lx` present) | 0 or 1 | 1 = tensor resides in the LX scratchpad. MUST match `component_: "lx"` in the corresponding `ScheduleTreeNode`. |
 | `lx.isPadded` | integer | No | 0 or 1 | 1 = LX allocation includes padding. See [Padding](padding.md). |
 | `lx.isZeroPadded` | integer | No | 0 or 1 | 1 = padded region in LX is zero-filled. Only meaningful when `isPadded: 1`. |
-| `lx.allocateNode_` | string | No | MUST match a `ScheduleTreeNode.name_` | Name of the `ScheduleTreeNode` that allocates this tensor in LX. |
 
 ## Example
 
