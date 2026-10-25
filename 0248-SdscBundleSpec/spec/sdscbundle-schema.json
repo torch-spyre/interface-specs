@@ -1,9 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/torch-spyre/torch-spyre/sdscbundle-schema.json",
   "title": "SDSC Bundle JSON Schema",
   "description": "Input contract for a single SDSC JSON document: the per-operation descriptor that a bundle's MLIR references. Declares the fields a producer may set, their types, and their permitted values.",
-  "version": "1.0.0",
+  "deeptoolsRelease": "2.1.0",
   "type": "object",
   "patternProperties": {
     "^[a-zA-Z0-9_/\\-][a-zA-Z0-9_/\\-]*$": {

@@ -1,9 +1,10 @@
 # **SuperDSC-Bundle Interface Specification**
 
-**Spec Version:** 1.0.0
+**Spec Version:** 2.1.0
 **Status:** Active
 
-> The spec version follows the deeptoolsRelease versioning.
+> The spec version is the DeepTools release it describes, and matches the
+> `deeptoolsRelease` field of [`sdscbundle-schema.json`](spec/sdscbundle-schema.json).
 
 **Authors:**
 * @lupalby
