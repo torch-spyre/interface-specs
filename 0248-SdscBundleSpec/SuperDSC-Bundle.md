@@ -168,6 +168,15 @@ The individual fields of the SuperDSC to express an operation and its core mappi
     * DataFormats dataFormat_ in `sdsc.dscs_[0].labeledDs_[x]`
   * memory residency (HBM vs LX)
     * `SenComponents component_` in AllocateNode
+    * for HBM allocations, whether the tensor is stored as a single unified tensor or per core
+      * `bool nonUnifiedAllocInHBM_` in AllocateNode
+      * `false` (default): unified allocation. The tensor lives in HBM as one single tensor covering all cores, sized by the total dimensions `N_` in `sdsc.dscs_[0]`. The data each core needs is a sub-rectangle of that one tensor. A start address is still filled for every core, but all of them are positions inside that one tensor: each core's address is the start of its sub-rectangle, i.e. a common tensor base plus the offset given by the core's slice coordinates and the layout strides.
+      * `true`: non-unified allocation. The HBM data needed by each core is stored as its own smaller tensor, sized by the per-core (“core”) datastage instead of by `N_`. Each of these per-core tensors is placed independently: they need not be contiguous with one another, need not follow a common stride, and can be at unrelated locations in HBM, so there is no single unified tensor holding the whole data structure.
+        * the per-core entries of `FoldManager<int64_t> startAddressCoreCorelet_` point to these independent per-core tensors, rather than to sub-rectangles of one unified tensor as in the unified case, so they need not be derivable from a common tensor base and the layout strides
+        * within each per-core tensor the layout is described as usual (`layoutDimOrder_` in `AllocateNode`, stick layout in `primaryDsInfo_`); only the placement of the per-core tensors in HBM differs from the unified case
+        * the allocation coordinates use the same core fold convention as an LX allocation (see below), since each core holds only its own slice of the data structure
+        * typically used when the tensor is produced or consumed core-wise (e.g. the producing SDSC wrote each core’s slice at its own address) and the frontend does not want to materialize a unified copy of it
+        * only meaningful when `component_` is HBM; leave `false` for LX allocations
   * start address per core
     * `FoldManager<int64_t> startAddressCoreCorelet_` in AllocateNode
     * first fold is for cores, set as Map fold type
@@ -213,8 +222,9 @@ The individual fields of the SuperDSC to express an operation and its core mappi
         * alpha=1, beta=0, factor=4
       * coordinates also require spatial folds
         * core fold
-          * for HBM, N/A → alpha=1, factor=1
+          * for unified HBM allocations, N/A → alpha=1, factor=1
           * for LX, alpha=coordinate offset across slices, factor=number of slices in dimension
+          * for non-unified HBM allocations (`nonUnifiedAllocInHBM_` set), same as LX, as each core holds only its own slice
         * corelet fold: N/A → alpha=1, factor=1
         * row fold: N/A → alpha=1, factor=1
       * **NOTE**: the tensor allocation need NOT be compatible with compute work division i.e, data in one core is directly available for compute in another core. The backend compiler will ensure proper data movement across cores. This functionality is not yet available in the backend, it will be implemented in a future iteration.
