@@ -374,8 +374,8 @@
         },
         "paddingSizes_": {
           "type": "object",
-          "description": "Per-dimension padding information for a windowed operation. Keyed by the padded output spatial dimension: 'i' or 'j'. Note the key carries no trailing underscore, unlike the dimension fields above.",
-          "propertyNames": {"enum": ["i", "j"]},
+          "description": "Per-dimension padding information for a windowed operation. Keyed by the padded dimension. Note the key carries no trailing underscore, unlike the dimension fields above.",
+          "propertyNames": {"$ref": "#/$defs/PrimaryDim"},
           "additionalProperties": {"$ref": "#/$defs/DimPaddingSizes"}
         }
       }
@@ -658,7 +658,7 @@
         },
         "stride_": {"type": "integer", "minimum": 1, "description": "Stride. Default 1."},
         "dilation_": {"type": "integer", "minimum": 1, "description": "Dilation. Default 1."},
-        "windowDim_": {"type": "string", "description": "The reduction dimension this window is distributed over: 'ki' for a padded 'i', 'kj' for a padded 'j'. No trailing underscore.", "enum": ["ki", "kj"]}
+        "windowDim_": {"$ref": "#/$defs/PrimaryDim", "description": "The dimension this window is distributed over (ki for a padded i, kj for a padded j in the current frontend). No trailing underscore."}
       },
       "additionalProperties": false
     },
