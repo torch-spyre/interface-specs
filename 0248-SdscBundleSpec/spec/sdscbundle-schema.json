@@ -279,32 +279,7 @@
           "type": "object",
           "description": "Physical memory layout per tensor role (INPUT, OUTPUT, KERNEL, KERNEL_IDX). Each key is an uppercase tensor-role label; the value is a PrimaryDsInfo object specifying layout order, stick dimensions, and stick sizes. Keys must match dsType_ values used in labeledDs_.",
           "patternProperties": {
-            "^[A-Z_]+$": {
-              "type": "object",
-              "description": "Layout information for one tensor role. layoutDimOrder_ lists dimensions outermost-first; stickDimOrder_ and stickSize_ are parallel arrays defining the innermost contiguous storage tile.",
-              "properties": {
-                "layoutDimOrder_": {
-                  "type": "array",
-                  "description": "Ordered list of dimension names describing how the tensor is laid out in memory, outermost first. Dimension names must match those declared in DataStructDims.",
-                  "items": {"$ref": "#/$defs/PrimaryDim"}
-                },
-                "stickDimOrder_": {
-                  "type": "array",
-                  "description": "The innermost contiguous dimensions that form a stick — the atomic unit of storage transfer. Must be a suffix subset of layoutDimOrder_. Parallel to stickSize_.",
-                  "items": {"$ref": "#/$defs/PrimaryDim"}
-                },
-                "stickSize_": {
-                  "type": "array",
-                  "description": "Size of each stick dimension in elements. Parallel to stickDimOrder_: stickSize_[i] is the element count for stickDimOrder_[i].",
-                  "items": {"type": "integer", "minimum": 1}
-                },
-                "stickRepl_": {
-                  "type": "array",
-                  "description": "Per-stick-dimension replication counts, parallel to stickDimOrder_. Set for pool and window operations. Defaults to all-ones when absent.",
-                  "items": {"type": "integer", "minimum": 1}
-                }
-              }
-            }
+            "^[A-Z_]+$": {"$ref": "#/$defs/PrimaryDsInfo"}
           }
         },
         "scheduleTree_": {
@@ -337,6 +312,33 @@
           "type": "array",
           "description": "Compute operations to execute. More than one entry when operations are fused.",
           "items": {"$ref": "#/$defs/ComputeOperation"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "PrimaryDsInfo": {
+      "type": "object",
+      "description": "Layout information for one tensor role. layoutDimOrder_ lists dimensions outermost-first; stickDimOrder_ and stickSize_ are parallel arrays defining the innermost contiguous storage tile.",
+      "properties": {
+        "layoutDimOrder_": {
+          "type": "array",
+          "description": "Ordered list of dimension names describing how the tensor is laid out in memory, outermost first. Dimension names must match those declared in DataStructDims.",
+          "items": {"$ref": "#/$defs/PrimaryDim"}
+        },
+        "stickDimOrder_": {
+          "type": "array",
+          "description": "The innermost contiguous dimensions that form a stick — the atomic unit of storage transfer. Must be a suffix subset of layoutDimOrder_. Parallel to stickSize_.",
+          "items": {"$ref": "#/$defs/PrimaryDim"}
+        },
+        "stickSize_": {
+          "type": "array",
+          "description": "Size of each stick dimension in elements. Parallel to stickDimOrder_: stickSize_[i] is the element count for stickDimOrder_[i].",
+          "items": {"type": "integer", "minimum": 1}
+        },
+        "stickRepl_": {
+          "type": "array",
+          "description": "Per-stick-dimension replication counts, parallel to stickDimOrder_. Set for pool and window operations. Defaults to all-ones when absent.",
+          "items": {"type": "integer", "minimum": 1}
         }
       },
       "additionalProperties": false
@@ -657,7 +659,8 @@
         "stride_": {"type": "integer", "minimum": 1, "description": "Stride. Default 1."},
         "dilation_": {"type": "integer", "minimum": 1, "description": "Dilation. Default 1."},
         "windowDim_": {"type": "string", "description": "The reduction dimension this window is distributed over: 'ki' for a padded 'i', 'kj' for a padded 'j'. No trailing underscore.", "enum": ["ki", "kj"]}
-      }
+      },
+      "additionalProperties": false
     },
     "PrimaryDim": {
       "type": "string",

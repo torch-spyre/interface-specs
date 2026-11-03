@@ -18,6 +18,8 @@ If a padded dimension is chunked across cores, `padFront_` and `padBack_` MUST b
 
 ### Fields
 
+Each `paddingSizes_` entry accepts only the fields below. No additional properties are allowed.
+
 | Field | Type | Description |
 |---|---|---|
 | `padFront_` | integer | Front padding elements. Default `0`. `-1` (in `dataStageParam_` entries only) when the dimension is chunked across cores. |

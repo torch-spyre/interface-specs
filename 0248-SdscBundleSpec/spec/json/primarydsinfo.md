@@ -35,6 +35,8 @@ labels such as `INPUT`, `OUTPUT`, `KERNEL`, or `KERNEL_IDX`.
 
 ## Fields
 
+All four fields are optional. No additional properties are allowed.
+
 | Field | Type | Required | Constraints | Description |
 |---|---|---|---|---|
 | `layoutDimOrder_` | array of string | No | Dimension names (`i`, `ij`, `in`, `j`, `ki`, `kij`, `kj`, `mb`, `out`, `x`, `x1`, `y`) matching those declared in `DataStructDims` | Ordered list of dimension names describing how the tensor is laid out in memory, outermost first. |
