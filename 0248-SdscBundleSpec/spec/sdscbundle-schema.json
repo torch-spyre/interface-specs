@@ -137,7 +137,7 @@
       "properties": {
         "factor_": {
           "type": "integer",
-          "description": "Iteration extent of this fold dimension: legal indices are 0 .. factor_-1, and FoldManager::isLegal errors on any index >= factor_. 1 = no splitting. Minimum 1 is therefore correct -- factor_ 0 admits no index at all, so the dimension cannot be read. Known frontend bug: elem_arr_1 is emitted as a whole-stick count (size divided by elements-per-stick, rounding down), which underflows to 0 for a dimension smaller than one stick -- but factor_ is an index extent, so it must round up. The gather/scatter fixtures under dxp/test carry the bad value and fail validation until the frontend is corrected.",
+          "description": "Number of entries in this fold dimension. Legal indices are 0..factor_-1. When deriving it from a dimension's size, round up, so a dimension smaller than one slice still gets 1.",
           "minimum": 1
         },
         "label_": {
@@ -557,7 +557,7 @@
         },
         "dsType_": {
           "type": "string",
-          "description": "Data structure type (from torch_spyre LAYOUT_INPUT_LABELS and LAYOUT_OUTPUT_LABELS)",
+          "description": "Data structure type.",
           "enum": ["INPUT", "OUTPUT", "KERNEL", "KERNEL_IDX"]
         },
         "scale_": {
@@ -610,7 +610,7 @@
             },
             "fidelity_": {
               "type": "string",
-              "description": "Computation fidelity, from the OpAttributes::Fidelity enum (string mapping in OpAttributes::fidelityToString).",
+              "description": "Computation fidelity.",
               "enum": ["regular", "fast"]
             }
           }
