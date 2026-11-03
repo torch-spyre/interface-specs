@@ -168,7 +168,8 @@
                 }
               },
               "WkSplit": {"type": "object"}
-            }
+            },
+            "additionalProperties": false
           }
         },
         "dim_prop_attr": {
