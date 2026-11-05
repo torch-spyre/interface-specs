@@ -63,7 +63,7 @@ in `startAddressCoreCorelet_`. Spatial tiling coordinates are captured in a
 | `layoutDimOrder_` | array of string | No | Dimension names (`i`, `ij`, `in`, `j`, `ki`, `kij`, `kj`, `mb`, `out`, `x`, `x1`, `y`) declared in `DataStructDims` | Physical memory layout order, outermost first. Tensor layout is specified from inner to outer. Overrides the global `primaryDsInfo_` order when present. |
 | `maxDimSizes_` | array of integer | No | Parallel to `layoutDimOrder_` | Maximum element count per dimension. No minimum is enforced; `-1` is the typical value when the size is not constrained. |
 | `isStartAddrSymbolic_` | boolean or integer (0/1) | No | `true`/`false` or `1`/`0` | When true (`1`), the `data_` values in `startAddressCoreCorelet_` are symbolic identifiers rather than concrete byte offsets. See [`startAddressCoreCorelet_`](#startaddresscorecorelet_) below. |
-| `nonUnifiedAllocInHBM_` | boolean or integer (0/1) | No | `true`/`false` or `1`/`0` | Layout style for HBM allocations. `false` (the default) indicates unified layout: the tensor lives in HBM as a single tensor covering all cores sized by `N_`, and each core's data is a sub-rectangle reached from a common base address. `true` indicates non-unified layout: data each core needs is stored as an independent smaller tensor sized by the per-core `"core"` data staging, placed independently in HBM (not necessarily contiguous, no common stride). Non-unified implies per-core start addresses in `startAddressCoreCorelet_` (core fold as `Map`) and LX-like core coordinates. Ignored when `component_` is not `"hbm"`. See [`nonUnifiedAllocInHBM_`](#nonunifiedallocinhbm_) below. |
+| `nonUnifiedAllocInHBM_` | boolean or integer (0/1) | No | `true`/`false` or `1`/`0` | Layout style for HBM allocations. `false` (the default) indicates unified layout: the tensor lives in HBM as a single tensor covering all cores sized by `N_`, and each core's data is a sub-rectangle of it; each core's start address is the start of its sub-rectangle. `true` indicates non-unified layout: data each core needs is stored as an independent smaller tensor sized by the per-core `"core"` data staging, placed independently in HBM (not necessarily contiguous, no common stride), and each core's start address points to its own tensor. Non-unified uses the LX core fold convention in `coordinates_`. Ignored when `component_` is not `"hbm"`. See [`nonUnifiedAllocInHBM_`](#nonunifiedallocinhbm_) below. |
 | `startAddressCoreCorelet_` | [FoldManager](foldmanager.md) | No | — | Per-core / per-corelet start address for this allocation, expressed as a FoldManager. See [`startAddressCoreCorelet_`](#startaddresscorecorelet_) below. |
 | `backGapCore_` | `map<dim, map<coreId, string>>` | No | Outer keys: dimension names; inner keys: core IDs as decimal strings | Back-gap size (in elements) per dimension per core. Outer key is a dimension name; inner key is a core ID (`^-?[0-9]+$`, where `"-1"` denotes HBM); value is the gap size as a decimal string. Populated for restickify ops where stick-alignment widening creates a shortfall between the iteration extent and the tensor's device size — see [Stick-Alignment Padding](stick-padding.md). A node that has both HBM and LX residency (i.e. a tensor staged from HBM into LX) only generates a `backGapCore_` entry on the residency where the shortfall occurs; `"-1"` (HBM) and real core ID entries do not coexist in the same node. |
 | `padding_` | map&lt;string, string&gt; | No | Keys: dimension names; values: a pad type (as `CoordinateInfo.padding`) | Padding type per dimension for this allocation. Set when the tensor requires memory padding beyond its logical size. See [Padding](padding.md) for details. |
@@ -79,7 +79,7 @@ in `startAddressCoreCorelet_`. Spatial tiling coordinates are captured in a
 - **Unified (`false` / `0`, default)**: The tensor lives in HBM as a single unified tensor covering all cores, sized by `N_`. Each core accesses its slice as a sub-rectangle of this global tensor. A start address is still filled for every core, but all of them are positions inside that one tensor: each core's address is the start of its sub-rectangle, i.e. a common tensor base plus the offset given by the core's slice coordinates and the layout strides.
 - **Non-unified (`true` / `1`)**: The HBM data each core needs is stored as an independent, smaller tensor sized by the per-core `"core"` data staging instead of by `N_`. These per-core tensors are placed independently in HBM (they do not have to be contiguous, need not follow a common stride, and can be at unrelated locations), so no unified tensor holding the whole data structure exists. Non-unified layout implies:
   - Separate start addresses per core in `startAddressCoreCorelet_` (with `Map` on the core dimension). The per-core entries point to the independent per-core tensors rather than to sub-rectangles of one unified tensor, so they need not be derivable from a common tensor base and the layout strides.
-  - LX-like core fold in the allocation's `coordinates_`, since each core holds only its own slice of the data structure.
+  - LX-like core fold in the allocation's `coordinates_`, since each core holds only its own slice of the data structure. See [Core fold by memory](#core-fold-by-memory).
   - Within each per-core tensor the layout is described as usual (`layoutDimOrder_`, stick layout in `primaryDsInfo_`); only the placement of the per-core tensors in HBM differs from the unified case.
 
 Non-unified layout is typically used when the tensor is produced or consumed core-wise (for example, the producing SDSC wrote each core's slice at its own address) and the frontend does not want to materialize a unified copy of it.
@@ -173,6 +173,17 @@ For a **stick dimension** `coordInfo.elemArr` is `2` and `dim_prop_attr`
 includes an additional `elem_arr_1` entry. The `factor_` of `elem_arr_0` gives
 the number of elements per stick; the `factor_` of `elem_arr_1` gives the
 number of sticks in the slice.
+
+### Core fold by memory
+
+The `core_fold` entry of each dimension's `folds` depends on where the
+allocation lives:
+
+| Allocation | `core_fold` |
+|---|---|
+| HBM, unified (`nonUnifiedAllocInHBM_` `false`) | Not split: `alpha_` 1, `factor_` 1 |
+| LX | `alpha_` = coordinate offset between successive slices; `factor_` = number of slices in the dimension |
+| HBM, non-unified (`nonUnifiedAllocInHBM_` `true`) | Same as LX, since each core holds only its own slice. See [`nonUnifiedAllocInHBM_`](#nonunifiedallocinhbm_). |
 
 ### Worked example
 
