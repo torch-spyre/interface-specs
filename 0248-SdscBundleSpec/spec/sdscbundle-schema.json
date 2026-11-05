@@ -529,8 +529,8 @@
       "description": "Memory slot presence and padding flags for a single memory type (HBM or LX).",
       "required": ["isPresent"],
       "properties": {
-        "isPresent":    {"type": "integer", "enum": [0, 1], "description": "1 = tensor resides in this memory, 0 = absent"},
-        "isPadded":     {"type": "integer", "enum": [0, 1], "description": "1 = allocation includes padding. See DimPaddingSizes for padding details."},
+        "isPresent":    {"description": "1 = tensor resides in this memory, 0 = absent. Accepts boolean true/false or integer 1/0.", "oneOf": [{"type": "boolean"}, {"type": "integer", "enum": [0, 1]}]},
+        "isPadded":     {"description": "1 = allocation includes padding. See DimPaddingSizes for padding details. Accepts boolean true/false or integer 1/0.", "oneOf": [{"type": "boolean"}, {"type": "integer", "enum": [0, 1]}]},
         "isZeroPadded": {"type": "integer", "enum": [0, 1], "description": "1 = padded region is zero-filled. Only meaningful when isPadded is 1."}
       },
       "additionalProperties": false
