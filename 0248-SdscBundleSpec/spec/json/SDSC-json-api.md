@@ -218,7 +218,7 @@ Any frontend producer emitting SDSC JSON (such as `torch-spyre`) MUST adhere to 
 
 1. **Root Key & Wrapper Key Pattern**: The top-level root key and the `dscs_` wrapper keys MUST match `^[a-zA-Z0-9_/\-][a-zA-Z0-9_/\-]*$`.
 2. **String-Integer Map Keys vs. Integer Arrays**: In map structures (such as `coreIdToWkSlice_`, `constantInfo_`, `dataStageParam_`), core IDs and sequence indices MUST be string-encoded integers (e.g. `"0"`, `"1"`). In array structures (such as `coreIdsUsed_`), core IDs MUST be literal integers (`0`, `1`).
-3. **Sentinel Values (`-1`)**: Inactive dimension fields in `N_`, unset staging dimensions, and unbound dimensions in `maxDimSizes_` use `-1` as the sentinel value.
+3. **Sentinel Values (`-1`)**: Unset staging dimensions and unbound dimensions in `maxDimSizes_` use `-1` as the sentinel value. A dimension field that an operation does not use is omitted from `N_` rather than set to `-1`.
 4. **Empty Structures**:
    - `constantInfo_` uses the string `"{}"` when no constants are present.
 5. **Strict Schema Conformance**: All objects have `additionalProperties: false`. No extra or undeclared fields may be included.

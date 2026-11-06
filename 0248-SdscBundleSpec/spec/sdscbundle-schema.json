@@ -137,7 +137,7 @@
       "properties": {
         "factor_": {
           "type": "integer",
-          "description": "Iteration extent of this fold dimension: legal indices are 0 .. factor_-1, and FoldManager::isLegal errors on any index >= factor_. 1 = no splitting. Minimum 1 is therefore correct -- factor_ 0 admits no index at all, so the dimension cannot be read. Known frontend bug: elem_arr_1 is emitted as a whole-stick count (size divided by elements-per-stick, rounding down), which underflows to 0 for a dimension smaller than one stick -- but factor_ is an index extent, so it must round up. The gather/scatter fixtures under dxp/test carry the bad value and fail validation until the frontend is corrected.",
+          "description": "Number of entries in this fold dimension. Legal indices are 0..factor_-1. When deriving it from a dimension's size, round up, so a dimension smaller than one slice still gets 1.",
           "minimum": 1
         },
         "label_": {
@@ -168,7 +168,8 @@
                 }
               },
               "WkSplit": {"type": "object"}
-            }
+            },
+            "additionalProperties": false
           }
         },
         "dim_prop_attr": {
@@ -279,32 +280,7 @@
           "type": "object",
           "description": "Physical memory layout per tensor role (INPUT, OUTPUT, KERNEL, KERNEL_IDX). Each key is an uppercase tensor-role label; the value is a PrimaryDsInfo object specifying layout order, stick dimensions, and stick sizes. Keys must match dsType_ values used in labeledDs_.",
           "patternProperties": {
-            "^[A-Z_]+$": {
-              "type": "object",
-              "description": "Layout information for one tensor role. layoutDimOrder_ lists dimensions outermost-first; stickDimOrder_ and stickSize_ are parallel arrays defining the innermost contiguous storage tile.",
-              "properties": {
-                "layoutDimOrder_": {
-                  "type": "array",
-                  "description": "Ordered list of dimension names describing how the tensor is laid out in memory, outermost first. Dimension names must match those declared in DataStructDims.",
-                  "items": {"$ref": "#/$defs/PrimaryDim"}
-                },
-                "stickDimOrder_": {
-                  "type": "array",
-                  "description": "The innermost contiguous dimensions that form a stick — the atomic unit of storage transfer. Must be a suffix subset of layoutDimOrder_. Parallel to stickSize_.",
-                  "items": {"$ref": "#/$defs/PrimaryDim"}
-                },
-                "stickSize_": {
-                  "type": "array",
-                  "description": "Size of each stick dimension in elements. Parallel to stickDimOrder_: stickSize_[i] is the element count for stickDimOrder_[i].",
-                  "items": {"type": "integer", "minimum": 1}
-                },
-                "stickRepl_": {
-                  "type": "array",
-                  "description": "Per-stick-dimension replication counts, parallel to stickDimOrder_. Set for pool and window operations. Defaults to all-ones when absent.",
-                  "items": {"type": "integer", "minimum": 1}
-                }
-              }
-            }
+            "^[A-Z_]+$": {"$ref": "#/$defs/PrimaryDsInfo"}
           }
         },
         "scheduleTree_": {
@@ -341,6 +317,33 @@
       },
       "additionalProperties": false
     },
+    "PrimaryDsInfo": {
+      "type": "object",
+      "description": "Layout information for one tensor role. layoutDimOrder_ lists dimensions outermost-first; stickDimOrder_ and stickSize_ are parallel arrays defining the innermost contiguous storage tile.",
+      "properties": {
+        "layoutDimOrder_": {
+          "type": "array",
+          "description": "Ordered list of dimension names describing how the tensor is laid out in memory, outermost first. Dimension names must match those declared in DataStructDims.",
+          "items": {"$ref": "#/$defs/PrimaryDim"}
+        },
+        "stickDimOrder_": {
+          "type": "array",
+          "description": "The innermost contiguous dimensions that form a stick — the atomic unit of storage transfer. Must be a suffix subset of layoutDimOrder_. Parallel to stickSize_.",
+          "items": {"$ref": "#/$defs/PrimaryDim"}
+        },
+        "stickSize_": {
+          "type": "array",
+          "description": "Size of each stick dimension in elements. Parallel to stickDimOrder_: stickSize_[i] is the element count for stickDimOrder_[i].",
+          "items": {"type": "integer", "minimum": 1}
+        },
+        "stickRepl_": {
+          "type": "array",
+          "description": "Per-stick-dimension replication counts, parallel to stickDimOrder_. Set for pool and window operations. Defaults to all-ones when absent.",
+          "items": {"type": "integer", "minimum": 1}
+        }
+      },
+      "additionalProperties": false
+    },
     "DataStructDims": {
       "type": "object",
       "description": "Data structure dimensions. All numeric dimension values are numbers, with -1 meaning unset. A dimension a given operation does not use is omitted rather than set to -1.",
@@ -372,8 +375,8 @@
         },
         "paddingSizes_": {
           "type": "object",
-          "description": "Per-dimension padding information for a windowed operation. Keyed by the padded output spatial dimension: 'i' or 'j'. Note the key carries no trailing underscore, unlike the dimension fields above.",
-          "propertyNames": {"enum": ["i", "j"]},
+          "description": "Per-dimension padding information for a windowed operation. Keyed by the padded dimension. Note the key carries no trailing underscore, unlike the dimension fields above.",
+          "propertyNames": {"$ref": "#/$defs/PrimaryDim"},
           "additionalProperties": {"$ref": "#/$defs/DimPaddingSizes"}
         }
       }
@@ -424,7 +427,7 @@
           ]
         },
         "nonUnifiedAllocInHBM_": {
-          "description": "How an HBM allocation is laid out. False (the default) is unified: the tensor lives in HBM as one tensor covering all cores, sized by N_, and each core's data is a sub-rectangle of it reached from one common start address. True is non-unified: the HBM data each core needs is stored as its own smaller tensor, sized by the per-core \"core\" datastage, and those per-core tensors are placed independently -- not necessarily contiguous, no common stride, possibly at unrelated locations in HBM -- so no unified tensor for the data structure exists. Non-unified implies one start address per core in startAddressCoreCorelet_ (core fold as Map) and an LX-like core fold in the allocation coordinates; the intra-tensor layout description is unchanged. Ignored when component_ is not hbm. Accepts boolean true/false or integer 1/0.",
+          "description": "How an HBM allocation is laid out. False (the default) is unified: the tensor lives in HBM as one tensor covering all cores, sized by N_, and each core's data is a sub-rectangle of it; each core's start address is the start of its sub-rectangle. True is non-unified: the HBM data each core needs is stored as its own smaller tensor, sized by the per-core \"core\" datastage, and those per-core tensors are placed independently -- not necessarily contiguous, no common stride, possibly at unrelated locations in HBM -- so no unified tensor for the data structure exists. Non-unified implies that each core's start address in startAddressCoreCorelet_ (core fold as Map) points to its own tensor and an LX-like core fold in the allocation coordinates; the intra-tensor layout description is unchanged. Ignored when component_ is not hbm. Accepts boolean true/false or integer 1/0.",
           "oneOf": [
             {"type": "boolean"},
             {"type": "integer", "enum": [0, 1]}
@@ -526,8 +529,8 @@
       "description": "Memory slot presence and padding flags for a single memory type (HBM or LX).",
       "required": ["isPresent"],
       "properties": {
-        "isPresent":    {"type": "integer", "enum": [0, 1], "description": "1 = tensor resides in this memory, 0 = absent"},
-        "isPadded":     {"type": "integer", "enum": [0, 1], "description": "1 = allocation includes padding. See DimPaddingSizes for padding details."},
+        "isPresent":    {"description": "1 = tensor resides in this memory, 0 = absent. Accepts boolean true/false or integer 1/0.", "oneOf": [{"type": "boolean"}, {"type": "integer", "enum": [0, 1]}]},
+        "isPadded":     {"description": "1 = allocation includes padding. See DimPaddingSizes for padding details. Accepts boolean true/false or integer 1/0.", "oneOf": [{"type": "boolean"}, {"type": "integer", "enum": [0, 1]}]},
         "isZeroPadded": {"type": "integer", "enum": [0, 1], "description": "1 = padded region is zero-filled. Only meaningful when isPadded is 1."}
       },
       "additionalProperties": false
@@ -557,7 +560,7 @@
         },
         "dsType_": {
           "type": "string",
-          "description": "Data structure type (from torch_spyre LAYOUT_INPUT_LABELS and LAYOUT_OUTPUT_LABELS)",
+          "description": "Data structure type.",
           "enum": ["INPUT", "OUTPUT", "KERNEL", "KERNEL_IDX"]
         },
         "scale_": {
@@ -610,7 +613,7 @@
             },
             "fidelity_": {
               "type": "string",
-              "description": "Computation fidelity, from the OpAttributes::Fidelity enum (string mapping in OpAttributes::fidelityToString).",
+              "description": "Computation fidelity.",
               "enum": ["regular", "fast"]
             }
           }
@@ -656,8 +659,9 @@
         },
         "stride_": {"type": "integer", "minimum": 1, "description": "Stride. Default 1."},
         "dilation_": {"type": "integer", "minimum": 1, "description": "Dilation. Default 1."},
-        "windowDim_": {"type": "string", "description": "The reduction dimension this window is distributed over: 'ki' for a padded 'i', 'kj' for a padded 'j'. No trailing underscore.", "enum": ["ki", "kj"]}
-      }
+        "windowDim_": {"$ref": "#/$defs/PrimaryDim", "description": "The dimension this window is distributed over (ki for a padded i, kj for a padded j in the current frontend). No trailing underscore."}
+      },
+      "additionalProperties": false
     },
     "PrimaryDim": {
       "type": "string",

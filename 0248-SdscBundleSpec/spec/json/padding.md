@@ -6,7 +6,7 @@ When a dimension is padded due to window/padded operations like convolution, det
 
 ## paddingSizes_
 
-`paddingSizes_` is a dict keyed by spatial dimension label (e.g. `"i"`, `"j"`). It appears in three locations in the SDSC JSON:
+`paddingSizes_` is a dict keyed by the padded dimension's name (e.g. `"i"`, `"j"`). Keys are drawn from the primary dimension names (`in`, `out`, `mb`, `i`, `j`, `ij`, `ki`, `kj`, `kij`, `x`, `x1`, `y`) and carry no trailing underscore. It appears in three locations in the SDSC JSON:
 
 | Location | Value used |
 |---|---|
@@ -18,6 +18,8 @@ If a padded dimension is chunked across cores, `padFront_` and `padBack_` MUST b
 
 ### Fields
 
+Each `paddingSizes_` entry accepts only the fields below. No additional properties are allowed.
+
 | Field | Type | Description |
 |---|---|---|
 | `padFront_` | integer | Front padding elements. Default `0`. `-1` (in `dataStageParam_` entries only) when the dimension is chunked across cores. |
@@ -28,7 +30,7 @@ If a padded dimension is chunked across cores, `padFront_` and `padBack_` MUST b
 | `totalSize_` | integer or `"N/A"` | Total input size inclusive of padding. `"N/A"` when `windowDim_` is unset and `padFront_` < 0. It is given by `(out - 1) × stride + kernel + unneededPad_`; it is the full or per-core input span depending on location. |
 | `stride_` | integer ≥ 1 | Stride applied with the operation. Default `1`. |
 | `dilation_` | integer ≥ 1 | Dilation applied with the operation. Default `1`. |
-| `windowDim_` | string | Associated window primary dimension name (e.g. `"ki"`). Uses `primaryDimToString` mapping. |
+| `windowDim_` | string | The dimension this window is distributed over (e.g. `"ki"` for a padded `i`, `"kj"` for a padded `j`). One of the primary dimension names listed above; no trailing underscore. |
 
 Some definitions of terms used in computing `unneededPad*` fields:
 

@@ -31,7 +31,6 @@ for this object.
   "ki_":    <number>,
   "kj_":    <number>,
   "x_":     <number>,
-  "x1_":    <number>,
   "y_":     <number>,
   "symbolicDimInfo_":  <map<string, SymbolicDimInfo>>,
   "maxSymbolicVolume_": <map<string, int>>,
@@ -41,13 +40,14 @@ for this object.
 
 ## Fields
 
-No fields are required; include only the dimensions relevant to the operation.
+No fields are required; include only the dimensions relevant to the operation. No additional properties are allowed.
 
 **Note on dim field values:** All numeric dimension fields accept either a number (typically `-1` when unset, or a positive value when set) or an empty object `{}`. The empty-object form is emitted in some symbolic-dimension contexts and MUST be tolerated by readers.
 
 ### Primary dimension fields
 
-These are always serialized (value `-1` when unset):
+A dimension an operation does not use is omitted rather than set to `-1`. `-1`
+marks a dimension that is present but unset (for example, a symbolic dimension):
 
 | Field | Type | Description |
 |---|---|---|
@@ -60,14 +60,13 @@ These are always serialized (value `-1` when unset):
 | `ki_` | number | Kernel rows. `-1` = unset. |
 | `kj_` | number | Kernel cols. `-1` = unset. |
 | `x_` | number | Repeat dimension that does not add reuse (e.g. attention heads). `-1` = unset. |
-| `x1_` | number | Additional repeat dimension (e.g. attention heads). `-1` = unset. |
 | `y_` | number | Kernel reuse dimension (e.g. time step). `-1` = unset. |
 
 ### Advanced fields
 
 | Field | Type | Description |
 |---|---|---|
-| `paddingSizes_` | map&lt;string, DimPaddingSizes&gt; | Per-dimension padding information. Keys are dim names (e.g. `"i"`, `"j"`). See [Padding](padding.md). |
+| `paddingSizes_` | map&lt;string, DimPaddingSizes&gt; | Per-dimension padding information. Keys are primary dimension names without a trailing underscore (e.g. `"i"`, `"j"`). See [Padding](padding.md). |
 | `symbolicDimInfo_` | map&lt;string, SymbolicDimInfo&gt; | Per-dimension symbolic size constraints. Keys are dimension names (e.g. `"mb"`, no trailing underscore). See [SymbolicDimInfo](#symbolicdiminfo) below. |
 | `maxSymbolicVolume_` | map&lt;string, integer&gt; | Maximum combined symbolic volume for a set of dims. Keys are dim-set arrays encoded as strings (e.g. `'["in_","mb_"]'`). |
 

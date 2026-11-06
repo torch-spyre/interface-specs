@@ -32,7 +32,7 @@ All five fields are required. No additional properties are allowed.
 | `temporal` | integer | Yes | `0` | Always set to `0` by the frontend. |
 | `elemArr` | integer | Yes | >= 0 | Element array level: `1` for non-stick dimensions, `2` for stick dimensions, or `0` when collapsed. Encodes whether this dimension maps to the innermost leaf elements or multiple sticks per slice. |
 | `padding` | string | Yes | `"nopad"`, `"lowered_padded"`, `"padded_nozeropad"`, `"padded_wzeropad"`, `"padded_fullspan"`, or `"padded_fullspan_wunneeded"` | Padding state for this dimension in the allocated buffer. `"nopad"` = no padding; `"lowered_padded"` = padding collapsed into a lowered layout; `"padded_nozeropad"` = padded but region is not zeroed (used with conv2d when padding is non-zero); `"padded_wzeropad"` = padded and region is zero-filled; `"padded_fullspan"` = full-span padding; `"padded_fullspan_wunneeded"` = full-span padding with unneeded pad elements (used with conv2d when padding is zero). |
-| `folds` | [FoldManager](foldmanager.md) | Yes | — | Defines how the coordinate value for this dimension is computed across the hierarchy using affine or constant fold functions. See [FoldProperty](foldproperty.md#folds-hierarchy) for hierarchy labels. |
+| `folds` | [FoldManager](foldmanager.md) | Yes | — | Defines how the coordinate value for this dimension is computed across the hierarchy using affine or constant fold functions. See [FoldProperty](foldproperty.md#folds-hierarchy) for hierarchy labels, and [Core fold by memory](scheduletreenode.md#core-fold-by-memory) for how the core fold depends on where the allocation lives. |
 
 ## Example
 
