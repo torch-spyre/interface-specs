@@ -115,12 +115,48 @@ sdscbundle.sdsc_execute (%addr_0, %addr_16384, %addr_32768) {sdsc_filename="sdsc
 sdscbundle.sdsc_execute (%addr_32768, %addr_49152, %arg_2) {sdsc_filename="sdsc_3.json", symbol_ids=[-8, -9, -10]}
 ```
 
+#### `sdscbundle.load_value_at_address` op
+
+A value the kernel only knows at run time, because an earlier SDSC in the bundle writes it to a tensor, can be read back into the bundle with `sdscbundle.load_value_at_address`. Its intended use is as the upper bound of an `scf.for`, so that a loop runs as many iterations as an earlier operation computed.
+
+```mlir
+%pool = sdscbundle.device_mem_allocate 4194304 bytes : index
+%offset = arith.constant 2097152 : index
+%count_addr = arith.addi %pool, %offset : index
+// an earlier sdscbundle.sdsc_execute writes the loop count at %count_addr
+...
+%loop_cnt = sdscbundle.load_value_at_address %count_addr {granularity = 1, max_value = 16} : index
+scf.for %i = %c0 to %loop_cnt step %c1 {
+  ...
+}
+```
+
+The operation **returns** the value stored in device memory at the given address, as an `index`. The value must be stored as FP32, the only format allowed, and hold an integer.
+
+The operation **operand** is the address to read from: a byte address in the same address space as the start addresses used inside `sdsc.json`, typically an address inside a buffer from `sdscbundle.device_mem_allocate` that an earlier `sdscbundle.sdsc_execute` in the bundle writes to.
+
+The operation **attributes**, both optional, bound the values it can return:
+* `max_value` the largest value that can be stored at the address. The backend plans for this many iterations when the result is a loop bound.
+* `granularity` the value is a multiple of it. It can only be given together with `max_value`.
+
+Both must be positive.
+
 #### Loops
 Loops are represented using [`scf.for`](https://mlir.llvm.org/docs/Dialects/SCFDialect/#scffor-scfforop) operation borrowed from MLIR's SCF dialect. This allows SuperDSC-Bundle to describe complex kernels with multiple levels of loops and multiple SDSCs.
 
 We do not support loop carried variables, the only supported scenario is the direct use of the induction variable (loop iterator).
 
-The loop bound should be a constant. Symbolic loop bound will be enhanced in the next revision of the spec.
+The lower bound and the step should be constants. The upper bound can be:
+* a constant
+* an input argument of the bundle, of type `!sdscbundle.input_arg` with a `max_value`, unwrapped with `sdscbundle.input_arg_extract value`. As for `sdscbundle.load_value_at_address`, `max_value` is the largest value the argument can take and `granularity`, if given, a value it is a multiple of:
+  ```mlir
+  func.func @sdsc_bundle(%n_arg: !sdscbundle.input_arg<index, granularity = 1, max_value = 4>) {
+    %n = sdscbundle.input_arg_extract value from %n_arg : !sdscbundle.input_arg<index, granularity = 1, max_value = 4> -> index
+    scf.for %i = %c0 to %n step %c1 {
+      ...
+    }
+  ```
+* the result of an `sdscbundle.load_value_at_address`, for a loop count an earlier SDSC of the bundle computes
 
 ### `sdsc.json` filling
 
