@@ -115,12 +115,48 @@ sdscbundle.sdsc_execute (%addr_0, %addr_16384, %addr_32768) {sdsc_filename="sdsc
 sdscbundle.sdsc_execute (%addr_32768, %addr_49152, %arg_2) {sdsc_filename="sdsc_3.json", symbol_ids=[-8, -9, -10]}
 ```
 
+#### `sdscbundle.load_value_at_address` op
+
+A value the kernel only knows at run time, because an earlier SDSC in the bundle writes it to a tensor, can be read back into the bundle with `sdscbundle.load_value_at_address`. Its intended use is as the upper bound of an `scf.for`, so that a loop runs as many iterations as an earlier operation computed.
+
+```mlir
+%pool = sdscbundle.device_mem_allocate 4194304 bytes : index
+%offset = arith.constant 2097152 : index
+%count_addr = arith.addi %pool, %offset : index
+// an earlier sdscbundle.sdsc_execute writes the loop count at %count_addr
+...
+%loop_cnt = sdscbundle.load_value_at_address %count_addr {granularity = 1, max_value = 16} : index
+scf.for %i = %c0 to %loop_cnt step %c1 {
+  ...
+}
+```
+
+The operation **returns** the value stored in device memory at the given address, as an `index`. The value must be stored as FP32, the only format allowed, and hold an integer.
+
+The operation **operand** is the address to read from: a byte address in the same address space as the start addresses used inside `sdsc.json`, typically an address inside a buffer from `sdscbundle.device_mem_allocate` that an earlier `sdscbundle.sdsc_execute` in the bundle writes to.
+
+The operation **attributes**, both optional, bound the values it can return:
+* `max_value` the largest value that can be stored at the address. The backend plans for this many iterations when the result is a loop bound.
+* `granularity` the value is a multiple of it. It can only be given together with `max_value`.
+
+Both must be positive.
+
 #### Loops
 Loops are represented using [`scf.for`](https://mlir.llvm.org/docs/Dialects/SCFDialect/#scffor-scfforop) operation borrowed from MLIR's SCF dialect. This allows SuperDSC-Bundle to describe complex kernels with multiple levels of loops and multiple SDSCs.
 
 We do not support loop carried variables, the only supported scenario is the direct use of the induction variable (loop iterator).
 
-The loop bound should be a constant. Symbolic loop bound will be enhanced in the next revision of the spec.
+The lower bound and the step should be constants. The upper bound can be:
+* a constant
+* an input argument of the bundle, of type `!sdscbundle.input_arg` with a `max_value`, unwrapped with `sdscbundle.input_arg_extract value`. As for `sdscbundle.load_value_at_address`, `max_value` is the largest value the argument can take and `granularity`, if given, a value it is a multiple of:
+  ```mlir
+  func.func @sdsc_bundle(%n_arg: !sdscbundle.input_arg<index, granularity = 1, max_value = 4>) {
+    %n = sdscbundle.input_arg_extract value from %n_arg : !sdscbundle.input_arg<index, granularity = 1, max_value = 4> -> index
+    scf.for %i = %c0 to %n step %c1 {
+      ...
+    }
+  ```
+* the result of an `sdscbundle.load_value_at_address`, for a loop count an earlier SDSC of the bundle computes
 
 ### `sdsc.json` filling
 
@@ -135,6 +171,9 @@ The individual fields of the SuperDSC to express an operation and its core mappi
     * Field `OpFuncs opFuncName` in `sdsc.dscs_[0].computeOp_[0]`
   * Set the format to execute the operation in (DL16, FP32, …)
     * Field `DataFormats dataFormat_` in `sdsc.dscs_[0].computeOp_[0].attributes_`
+  * For scan operations (non_zero_pos_to_idx), the dimension the scan walks along, each output depending on the inputs before it in that dimension
+    * Field `PrimaryDimTypes scanDim_` in `sdsc.dscs_[0].computeOp_[0].attributes_`, as a dimension name (e.g. `"in"`)
+    * Omitted for every other operation
   * List input/output tensors involved with the op
     * Fields `std::vector<LabeledDsInfo*> inputLabeledDs`, `std::vector<LabeledDsInfo*> outputLabeledDs` and `std::vector<LabeledDsInfo*> indirectAccessIndexLabeledDs`
 * Work division across cores
@@ -208,6 +247,7 @@ The individual fields of the SuperDSC to express an operation and its core mappi
       * Mark value/index allocations as such and link them to each other
         * enum class `IndirectAllocType indirectAllocType_` in AllocateNode
         * `AllocateNode- relatedIndirectAccessAlloc_` in AllocateNode
+      * The index tensor can be in SENUINT32 or in FP32 (`dataFormat_` in its `labeledDs_` entry); an FP32 index must hold integer values
   * Tensor coordinates per dimension
     * `CoordinateType<CoordinateBaseType> allocateCoordinates_` in AllocateNode
     * coordinates arrangement is expressed through a sequence of nested simple affine expressions (alpha*index + beta)
@@ -318,13 +358,16 @@ OpFuncs are specified within sdsc.json as field `OpFuncs opFuncName` in `sdsc.ds
 |         | QUANT_SCALE_PER_TOKEN  |   "quantscalepertoken" | DF16
 |         | SUM_NONSTICK  |   "sumnonstick" | DF16 or FP32 
 |         | SUM  |   "sum" | DF16 or FP32 
+|         | COUNT_NON_ZERO_ROUND_UP  |   "count_non_zero_round_up" | DF16 or FP32 | `roundup`: the multiple to round up to, a power of two | Counts the non-zero inputs along the reduction dimension and rounds the count up to a multiple of `roundup`. A count of 0 gives `roundup`
 |  Pooling  | AVGPOOL_FWD  |   "avgpoolfwd" | DF16 | `nmap`: reciprocal of the product of kernel size (`1/(kh*kw)`)
 |         | AVGPOOL_NMAP_FWD |   "avgpoolnmapfwd" | DF16 
 |         | DEPTHWISE_CONV_FWD  |   "depthwiseconv2dnative" | DF16 
 |         | MAXPOOL_FWD  |   "maxpoolfwd" | DF16
-| Scan    | MASK_BY_INDEX  |   "maskbyindex" | DF16 or FP32 
+| Scan    | MASK_BY_INDEX  |   "maskbyindex" | DF16 or FP32 | `maskval`: the value written to the masked elements | With two inputs (values and indices) and one output, writes `maskval` at the given indices and keeps the values everywhere else. To mask out elements for a following top-k, use -inf
 |         | TOPK_INDEX  |   "topkindex" | DF16 or FP32 
 |         | TOPK_VALUE  |   "topkvalue" | DF16 or FP32 
+|         | KEEP_BY_INDEX  |   "keepbyindex" | DF16 or FP32 | `maskval`: the value written to every element that is not kept | Complement of maskbyindex: with the same two inputs (values and indices) and one output, keeps the values at the given indices and writes `maskval` everywhere else
+|         | NON_ZERO_POS_TO_IDX  |   "non_zero_pos_to_idx" | DF16 or FP32 | `padval`: the value written for a zero input, usually the size of the scan dimension | Output has the shape and format of the input. Along `scanDim_`, a counter starts at 0: each non-zero input gets the value of the counter, which then increments, and each zero input gets `padval`
 | Quantization | CSQ_INT4_WT  |   "csqint4wt"   | Inputs: DF16 Output: INT4 |  `scaleact`: pre-quantization scale factor <br>`shiftact`: pre-quantization offset  |  Apply scale and shift to DL16 and quantize to INT4. Pack elements from four input sticks in a dimension different from the input stick dimension, alternating after every element
 |         | CSQ_INT4  |   "csqint4"  | Inputs: DF16 Output: INT4  |  `scaleact`: pre-quantization scale factor <br>`shiftact`: pre-quantization offset  |  Apply scale and shift to DL16 and quantize to INT4. Alternating every 8 elements, pack elements from four input sticks: first two sticks in the same dimension as the input stick dimension, then two such groups taken across a dimension different from the input stick dimension
 |         | CSQ_INT8_CH  |   "csqint8ch"  | Inputs: DF16 Output: INT8  |  `scaleact`: pre-quantization scale factor <br>`shiftact`: pre-quantization offset  |  Apply scale and shift to DL16 and quantize to INT8. Pack elements from two input sticks in the same dimension as the input stick dimension, alternating every 8 elements
@@ -379,6 +422,8 @@ For sum-nonstick/max-nonstick/min-nonstick/mean-nonstick/absmax-nonstick (there 
 * any number of non-reduction dimensions in the stick is allowed
 * same stick layout in input and output
 
+count_non_zero_round_up follows the nonstick rules: the reduction dimension cannot be in the stick, and the output has the same stick layout as the input, with scale=-1 for the reduction dimension. In DF16, at most 1023 elements can be reduced, and `roundup` can be at most 1024.
+
 #### Unary and Broadcast operations
 Any stick layout is acceptable, but all inputs and output must have same stick layout.
 If a stick dimension has broadcast in a tensor, all stick dimensions of that tensor must have broadcast.
@@ -387,6 +432,10 @@ If a stick dimension has broadcast in all tensors (inputs and output), then its 
 #### Scan
 
 In top-k, neither the reduction dimension nor k can be in the stick, any number of other dimensions can be in the stick
+
+maskbyindex and keepbyindex follow the same rule: neither the scanned dimension of the values nor k, the dimension of the indices, can be in the stick, any number of other dimensions can be in the stick. Values and output have the same stick layout.
+
+In non_zero_pos_to_idx, `scanDim_` cannot be in the stick, any number of other dimensions can be in the stick, and input and output have the same stick layout. In DF16, the index is exact up to 1024: `scanDim_` can have at most 1024 elements.
 
 #### layernormscale/layernormnorm/exx2
 Stick should only have the normalization dimension in it
@@ -413,6 +462,12 @@ For all operations, any constituent dimension is allowed to be split across core
 * For all index tensors used for indirect access, for each dimension present in the stick, the work assigned to a core should span an intergral number of sticks or <1 stick.
 
 When operation involves reduction across multiple dimensions, only one of its reduction dimensions is allowed to be split across cores. There is no constraint on operations with a single reduction dimension.
+
+In topkindex, topkvalue, maskbyindex and keepbyindex, the scanned dimension cannot be split across cores, while k can.
+
+In non_zero_pos_to_idx, `scanDim_` cannot be split across cores.
+
+In count_non_zero_round_up, the reduction dimension can be split across cores, as in the other reductions.
 
 ## Examples
 
