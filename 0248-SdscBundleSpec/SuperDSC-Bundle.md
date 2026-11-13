@@ -62,10 +62,25 @@ The operation does not **return** anything.
 The operation **attributes** are:
 * `sdsc_filename` the relavite path and filename of the specific sdsc.json to instantiate, relative to the location of the mlir file. As one bundle can contain multiple sdsc, different names must be chosen for each json file and here we can refer to the exact one of interest.
 * `symbol_ids` list of the symbol ids used inside the sdsc, if any, to represent symbolic start addresses or sizes
+* `lx_free_ranges` (optional) the parts of LX the backend may use while this sdsc executes; see [Free LX](#free-lx) below
 
 The operation **operands** are the SSA variables corresponding to the values to be assigned to the symbols listed in `symbol_ids`, passed in the same order as the symbol ids. These values can be constants (`arith.constant`), or the result of affine expressions, like [`affine.apply`](https://mlir.llvm.org/docs/Dialects/Affine/#affineapply-affineaffineapplyop). The affine expressions can be comprised of constants and loop iterators. Having actual symbols in mlir will be supported through the next revision of the spec.
 
 The `symbols_ids` must be unique in the bundle i.e., symbols ids cannot be recycled across sdscs that are part of the same bundle (unless they take the same value).
+
+##### Free LX
+
+The frontend and the backend share each core's LX. The frontend places the LX tensors of its sdscs; the backend uses the rest of LX for the buffers it plans while compiling each sdsc. `lx_free_ranges` tells the backend which part of LX is free for that use while a given sdsc executes:
+
+```mlir
+sdscbundle.sdsc_execute (%A_start_address) {sdsc_filename="sdscA.json", symbol_ids=[-1], lx_free_ranges=[[0, 262144], [1625344, 2031616]]}
+```
+
+* Each entry is a `[start, end]` pair of byte offsets into LX, with `start` included and `end` excluded. The entries must be sorted, must not overlap, and must lie within the LX capacity.
+* The same ranges apply to every core.
+* Everything outside the free ranges belongs to the frontend. It must hold every frontend tensor that is live in LX while the sdsc executes, including tensors the sdsc itself does not access but that a later sdsc reads. The LX tensors placed in the sdsc must not overlap any free range.
+* The backend allocates LX in whole sticks (128 bytes), so it only uses the whole sticks inside each range. Ranges aligned to 128 bytes lose nothing.
+* Without `lx_free_ranges`, the top fraction of LX given by the `DXP_LX_FRAC_AVAIL` environment variable (0.2 by default) is free, and the frontend owns everything below it.
 
 #### `sdscbundle.device_mem_allocate` op
 
