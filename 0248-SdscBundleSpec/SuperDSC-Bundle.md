@@ -374,6 +374,7 @@ OpFuncs are specified within sdsc.json as field `OpFuncs opFuncName` in `sdsc.ds
 |         | SUM_NONSTICK  |   "sumnonstick" | DF16 or FP32 
 |         | SUM  |   "sum" | DF16 or FP32 
 |         | COUNT_NON_ZERO_ROUND_UP  |   "count_non_zero_round_up" | DF16 or FP32 | `roundup`: the multiple to round up to, a power of two | Counts the non-zero inputs along the reduction dimension and rounds the count up to a multiple of `roundup`. A count of 0 gives `roundup`
+|         | COUNT_NON_ZERO_DIV_CEIL  |   "count_non_zero_div_ceil" | DF16 or FP32 | `divisor`: the value to divide by, a power of two | Counts the non-zero inputs along the reduction dimension, divides the count by `divisor` and rounds up. A count of 0 gives 1, so the result is always that of count_non_zero_round_up with `roundup` = `divisor`, divided by `divisor`
 |  Pooling  | AVGPOOL_FWD  |   "avgpoolfwd" | DF16 | `nmap`: reciprocal of the product of kernel size (`1/(kh*kw)`)
 |         | AVGPOOL_NMAP_FWD |   "avgpoolnmapfwd" | DF16 
 |         | DEPTHWISE_CONV_FWD  |   "depthwiseconv2dnative" | DF16 
@@ -437,7 +438,7 @@ For sum-nonstick/max-nonstick/min-nonstick/mean-nonstick/absmax-nonstick (there 
 * any number of non-reduction dimensions in the stick is allowed
 * same stick layout in input and output
 
-count_non_zero_round_up follows the nonstick rules: the reduction dimension cannot be in the stick, and the output has the same stick layout as the input, with scale=-1 for the reduction dimension. In DF16, at most 1023 elements can be reduced, and `roundup` can be at most 1024.
+count_non_zero_round_up and count_non_zero_div_ceil follow the nonstick rules: the reduction dimension cannot be in the stick, and the output has the same stick layout as the input, with scale=-1 for the reduction dimension. In DF16, at most 1023 elements can be reduced, and `roundup` or `divisor` can be at most 1024.
 
 #### Unary and Broadcast operations
 Any stick layout is acceptable, but all inputs and output must have same stick layout.
@@ -482,7 +483,7 @@ In topkindex, topkvalue, maskbyindex and keepbyindex, the scanned dimension cann
 
 In non_zero_pos_to_idx, `scanDim_` cannot be split across cores.
 
-In count_non_zero_round_up, the reduction dimension can be split across cores, as in the other reductions.
+In count_non_zero_round_up and count_non_zero_div_ceil, the reduction dimension can be split across cores, as in the other reductions.
 
 ## Examples
 
