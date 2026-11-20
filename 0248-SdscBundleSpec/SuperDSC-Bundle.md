@@ -132,7 +132,7 @@ sdscbundle.sdsc_execute (%addr_32768, %addr_49152, %arg_2) {sdsc_filename="sdsc_
 
 #### `sdscbundle.load_value_at_address` op
 
-A value the kernel only knows at run time, because an earlier SDSC in the bundle writes it to a tensor, can be read back into the bundle with `sdscbundle.load_value_at_address`. Its intended use is as the upper bound of an `scf.for`, so that a loop runs as many iterations as an earlier operation computed.
+A value in device memory that is only known at run time, e.g. because an earlier SDSC in the bundle writes it to a tensor, can be read into the bundle with `sdscbundle.load_value_at_address`. Its intended use is as the upper bound of an `scf.for`, so that a loop runs as many iterations as that value says.
 
 ```mlir
 %pool = sdscbundle.device_mem_allocate 4194304 bytes : index
@@ -148,11 +148,11 @@ scf.for %i = %c0 to %loop_cnt step %c1 {
 
 The operation **returns** the value stored in device memory at the given address, as an `index`. The value must be stored as FP32, the only format allowed, and hold an integer.
 
-The operation **operand** is the address to read from: a byte address in the same address space as the start addresses used inside `sdsc.json`, typically an address inside a buffer from `sdscbundle.device_mem_allocate` that an earlier `sdscbundle.sdsc_execute` in the bundle writes to.
+The operation **operand** is the address to read from: a byte address in the same address space as the start addresses used inside `sdsc.json`, typically an address inside a buffer from `sdscbundle.device_mem_allocate` that an earlier `sdscbundle.sdsc_execute` in the bundle writes to. The value can also be written before the bundle runs, at an address the bundle receives as an input argument; it only has to be in device memory when it is read. Like any start address in a bundle, the address can be computed from input arguments and loop iterators.
 
 The operation **attributes**, both optional, bound the values it can return:
 * `max_value` the largest value that can be stored at the address. The backend plans for this many iterations when the result is a loop bound.
-* `granularity` the value is a multiple of it. It can only be given together with `max_value`.
+* `granularity` the value is a multiple of it. It can only be given together with `max_value`. It describes the value, but is not used to compile the loop, nor checked at run time.
 
 Both must be positive.
 
@@ -171,7 +171,10 @@ The lower bound and the step should be constants. The upper bound can be:
       ...
     }
   ```
-* the result of an `sdscbundle.load_value_at_address`, for a loop count an earlier SDSC of the bundle computes
+* the result of an `sdscbundle.load_value_at_address` itself, for a loop count known only at run time, e.g. one an earlier SDSC of the bundle computes. The loop reads the value and decides at the end of each iteration whether to go round again, so:
+  * the bound has to be above the lower bound: the loop always runs at least one iteration, also when the value read would give none
+  * a value above `max_value` stops the loop after the iterations `max_value` allows
+  * a value that is not a multiple of the step rounds up: the loop runs until the next value of the iterator reaches it, as `scf.for` does, e.g. 600 with step 512 runs two iterations
 
 ### `sdsc.json` filling
 
