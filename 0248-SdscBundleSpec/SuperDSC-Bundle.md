@@ -132,7 +132,7 @@ sdscbundle.sdsc_execute (%addr_32768, %addr_49152, %arg_2) {sdsc_filename="sdsc_
 
 #### `sdscbundle.load_value_at_address` op
 
-A value the kernel only knows at run time, because an earlier SDSC in the bundle writes it to a tensor, can be read back into the bundle with `sdscbundle.load_value_at_address`. Its intended use is as the upper bound of an `scf.for`, so that a loop runs as many iterations as an earlier operation computed.
+A value in device memory that is only known at run time, e.g. because an earlier SDSC in the bundle writes it to a tensor, can be read into the bundle with `sdscbundle.load_value_at_address`. Its intended use is as the upper bound of an `scf.for`, so that a loop runs as many iterations as that value says.
 
 ```mlir
 %pool = sdscbundle.device_mem_allocate 4194304 bytes : index
@@ -148,11 +148,11 @@ scf.for %i = %c0 to %loop_cnt step %c1 {
 
 The operation **returns** the value stored in device memory at the given address, as an `index`. The value must be stored as FP32, the only format allowed, and hold an integer.
 
-The operation **operand** is the address to read from: a byte address in the same address space as the start addresses used inside `sdsc.json`, typically an address inside a buffer from `sdscbundle.device_mem_allocate` that an earlier `sdscbundle.sdsc_execute` in the bundle writes to.
+The operation **operand** is the address to read from: a byte address in the same address space as the start addresses used inside `sdsc.json`, typically an address inside a buffer from `sdscbundle.device_mem_allocate` that an earlier `sdscbundle.sdsc_execute` in the bundle writes to. The value can also be written before the bundle runs, at an address the bundle receives as an input argument; it only has to be in device memory when it is read. Like any start address in a bundle, the address can be computed from input arguments and loop iterators.
 
 The operation **attributes**, both optional, bound the values it can return:
 * `max_value` the largest value that can be stored at the address. The backend plans for this many iterations when the result is a loop bound.
-* `granularity` the value is a multiple of it. It can only be given together with `max_value`.
+* `granularity` the value is a multiple of it. It can only be given together with `max_value`. It describes the value, but is not used to compile the loop, nor checked at run time.
 
 Both must be positive.
 
@@ -171,7 +171,10 @@ The lower bound and the step should be constants. The upper bound can be:
       ...
     }
   ```
-* the result of an `sdscbundle.load_value_at_address`, for a loop count an earlier SDSC of the bundle computes
+* the result of an `sdscbundle.load_value_at_address` itself, for a loop count known only at run time, e.g. one an earlier SDSC of the bundle computes. The loop reads the value and decides at the end of each iteration whether to go round again, so:
+  * the bound has to be above the lower bound: the loop always runs at least one iteration, also when the value read would give none
+  * a value above `max_value` stops the loop after the iterations `max_value` allows
+  * a value that is not a multiple of the step rounds up: the loop runs until the next value of the iterator reaches it, as `scf.for` does, e.g. 600 with step 512 runs two iterations
 
 ### `sdsc.json` filling
 
@@ -374,6 +377,7 @@ OpFuncs are specified within sdsc.json as field `OpFuncs opFuncName` in `sdsc.ds
 |         | SUM_NONSTICK  |   "sumnonstick" | DF16 or FP32 
 |         | SUM  |   "sum" | DF16 or FP32 
 |         | COUNT_NON_ZERO_ROUND_UP  |   "count_non_zero_round_up" | DF16 or FP32 | `roundup`: the multiple to round up to, a power of two | Counts the non-zero inputs along the reduction dimension and rounds the count up to a multiple of `roundup`. A count of 0 gives `roundup`
+|         | COUNT_NON_ZERO_DIV_CEIL  |   "count_non_zero_div_ceil" | DF16 or FP32 | `divisor`: the value to divide by, a power of two | Counts the non-zero inputs along the reduction dimension, divides the count by `divisor` and rounds up. A count of 0 gives 1, so the result is always that of count_non_zero_round_up with `roundup` = `divisor`, divided by `divisor`
 |  Pooling  | AVGPOOL_FWD  |   "avgpoolfwd" | DF16 | `nmap`: reciprocal of the product of kernel size (`1/(kh*kw)`)
 |         | AVGPOOL_NMAP_FWD |   "avgpoolnmapfwd" | DF16 
 |         | DEPTHWISE_CONV_FWD  |   "depthwiseconv2dnative" | DF16 
@@ -437,7 +441,7 @@ For sum-nonstick/max-nonstick/min-nonstick/mean-nonstick/absmax-nonstick (there 
 * any number of non-reduction dimensions in the stick is allowed
 * same stick layout in input and output
 
-count_non_zero_round_up follows the nonstick rules: the reduction dimension cannot be in the stick, and the output has the same stick layout as the input, with scale=-1 for the reduction dimension. In DF16, at most 1023 elements can be reduced, and `roundup` can be at most 1024.
+count_non_zero_round_up and count_non_zero_div_ceil follow the nonstick rules: the reduction dimension cannot be in the stick, and the output has the same stick layout as the input, with scale=-1 for the reduction dimension. In DF16, at most 1023 elements can be reduced, and `roundup` or `divisor` can be at most 1024.
 
 #### Unary and Broadcast operations
 Any stick layout is acceptable, but all inputs and output must have same stick layout.
@@ -482,7 +486,7 @@ In topkindex, topkvalue, maskbyindex and keepbyindex, the scanned dimension cann
 
 In non_zero_pos_to_idx, `scanDim_` cannot be split across cores.
 
-In count_non_zero_round_up, the reduction dimension can be split across cores, as in the other reductions.
+In count_non_zero_round_up and count_non_zero_div_ceil, the reduction dimension can be split across cores, as in the other reductions.
 
 ## Examples
 
