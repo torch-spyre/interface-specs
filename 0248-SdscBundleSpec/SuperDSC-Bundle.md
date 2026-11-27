@@ -176,6 +176,8 @@ The lower bound and the step should be constants. The upper bound can be:
   * a value above `max_value` stops the loop after the iterations `max_value` allows
   * a value that is not a multiple of the step rounds up: the loop runs until the next value of the iterator reaches it, as `scf.for` does, e.g. 600 with step 512 runs two iterations
 
+  The value can also be written by an SDSC inside the loop it bounds: what an iteration writes decides whether the next one runs, so a loop can stop as soon as a value it computes says so. Unlike the bounds of a plain `scf.for`, the bound is then not fixed for the whole loop.
+
 ### `sdsc.json` filling
 
 The individual fields of the SuperDSC to express an operation and its core mapping is described below:
@@ -189,7 +191,7 @@ The individual fields of the SuperDSC to express an operation and its core mappi
     * Field `OpFuncs opFuncName` in `sdsc.dscs_[0].computeOp_[0]`
   * Set the format to execute the operation in (DL16, FP32, …)
     * Field `DataFormats dataFormat_` in `sdsc.dscs_[0].computeOp_[0].attributes_`
-  * For scan operations (non_zero_pos_to_idx), the dimension the scan walks along, each output depending on the inputs before it in that dimension
+  * For scan operations (non_zero_pos_to_idx, cumsum, cumprod, cummax, cummin), the dimension the scan walks along, each output depending on the inputs before it in that dimension
     * Field `PrimaryDimTypes scanDim_` in `sdsc.dscs_[0].computeOp_[0].attributes_`, as a dimension name (e.g. `"in"`)
     * Omitted for every other operation
   * List input/output tensors involved with the op
@@ -327,15 +329,17 @@ OpFuncs are specified within sdsc.json as field `OpFuncs opFuncName` in `sdsc.ds
 |  Broadcast    |  ADD  |   "add"  | DF16 or FP32 |   | Broadcast supported on any number of dimensions and on one or both inputs
 |         | BATCHNORM_FWD  |   "batchnormfwd" | DF16 or FP32 
 |         | BIASADD  |   "biasadd" | DF16 or FP32 
-|         | EQUAL  |   "equal" | DF16 or FP32 
+|         | EQUAL  |   "equal" | DF16 or FP32 | | 1 where the comparison holds, 0 elsewhere
 |         | FNMS  |   "fnms" | DF16 or FP32 
-|         | GREATEREQUAL  |   "greaterequal" | DF16 or FP32 
+|         | GREATEREQUAL  |   "greaterequal" | DF16 or FP32 | | 1 where the comparison holds, 0 elsewhere
+|         | GREATERTHAN  |   "greaterthan" | DF16 or FP32 | | 1 where the comparison holds, 0 elsewhere
 |         | LAYERNORM_NORM  |   "layernormnorm" | DF16 or FP32 
-|         | LESSEREQUAL  |   "lesserequal" | DF16 or FP32 
+|         | LESSEREQUAL  |   "lesserequal" | DF16 or FP32 | | 1 where the comparison holds, 0 elsewhere
+|         | LESSERTHAN  |   "lesserthan" | DF16 or FP32 | | 1 where the comparison holds, 0 elsewhere
 |         | MAXIMUM  |   "maximum" | DF16 or FP32 
 |         | MINIMUM  |   "minimum" | DF16 or FP32 
 |         | MUL  |   "mul" | DF16 or FP32 
-|         | NOTEQUAL  |   "notequal" | DF16 or FP32 
+|         | NOTEQUAL  |   "notequal" | DF16 or FP32 | | 1 where the comparison holds, 0 elsewhere
 |         | REALDIV  |   "realdiv" | DF16 or FP32 
 |         | REVSUB  |   "revsub" | DF16 or FP32 
 |         | SUB  |   "sub" | DF16 or FP32 
@@ -387,6 +391,10 @@ OpFuncs are specified within sdsc.json as field `OpFuncs opFuncName` in `sdsc.ds
 |         | TOPK_VALUE  |   "topkvalue" | DF16 or FP32 
 |         | KEEP_BY_INDEX  |   "keepbyindex" | DF16 or FP32 | `maskval`: the value written to every element that is not kept | Complement of maskbyindex: with the same two inputs (values and indices) and one output, keeps the values at the given indices and writes `maskval` everywhere else
 |         | NON_ZERO_POS_TO_IDX  |   "non_zero_pos_to_idx" | DF16 or FP32 | `padval`: the value written for a zero input, usually the size of the scan dimension | Output has the shape and format of the input. Along `scanDim_`, a counter starts at 0: each non-zero input gets the value of the counter, which then increments, and each zero input gets `padval`
+|         | CUMSUM  |   "cumsum" | DF16 or FP32 | | Output has the shape and format of the input. Along `scanDim_`, each output is the sum of the inputs up to and including it
+|         | CUMPROD  |   "cumprod" | DF16 or FP32 | | Output has the shape and format of the input. Along `scanDim_`, each output is the product of the inputs up to and including it
+|         | CUMMAX  |   "cummax" | DF16 or FP32 | | Output has the shape and format of the input. Along `scanDim_`, each output is the max of the inputs up to and including it (values only, no indices)
+|         | CUMMIN  |   "cummin" | DF16 or FP32 | | Output has the shape and format of the input. Along `scanDim_`, each output is the min of the inputs up to and including it (values only, no indices)
 | Quantization | CSQ_INT4_WT  |   "csqint4wt"   | Inputs: DF16 Output: INT4 |  `scaleact`: pre-quantization scale factor <br>`shiftact`: pre-quantization offset  |  Apply scale and shift to DL16 and quantize to INT4. Pack elements from four input sticks in a dimension different from the input stick dimension, alternating after every element
 |         | CSQ_INT4  |   "csqint4"  | Inputs: DF16 Output: INT4  |  `scaleact`: pre-quantization scale factor <br>`shiftact`: pre-quantization offset  |  Apply scale and shift to DL16 and quantize to INT4. Alternating every 8 elements, pack elements from four input sticks: first two sticks in the same dimension as the input stick dimension, then two such groups taken across a dimension different from the input stick dimension
 |         | CSQ_INT8_CH  |   "csqint8ch"  | Inputs: DF16 Output: INT8  |  `scaleact`: pre-quantization scale factor <br>`shiftact`: pre-quantization offset  |  Apply scale and shift to DL16 and quantize to INT8. Pack elements from two input sticks in the same dimension as the input stick dimension, alternating every 8 elements
@@ -456,6 +464,8 @@ maskbyindex and keepbyindex follow the same rule: neither the scanned dimension 
 
 In non_zero_pos_to_idx, `scanDim_` cannot be in the stick, any number of other dimensions can be in the stick, and input and output have the same stick layout. In DF16, the index is exact up to 1024: `scanDim_` can have at most 1024 elements.
 
+cumsum, cumprod, cummax and cummin follow the same rule: `scanDim_` cannot be in the stick, any number of other dimensions can be in the stick, and input and output have the same stick layout.
+
 #### layernormscale/layernormnorm/exx2
 Stick should only have the normalization dimension in it
 
@@ -484,7 +494,7 @@ When operation involves reduction across multiple dimensions, only one of its re
 
 In topkindex, topkvalue, maskbyindex and keepbyindex, the scanned dimension cannot be split across cores, while k can.
 
-In non_zero_pos_to_idx, `scanDim_` cannot be split across cores.
+In non_zero_pos_to_idx, cumsum, cumprod, cummax and cummin, `scanDim_` cannot be split across cores.
 
 In count_non_zero_round_up and count_non_zero_div_ceil, the reduction dimension can be split across cores, as in the other reductions.
 
