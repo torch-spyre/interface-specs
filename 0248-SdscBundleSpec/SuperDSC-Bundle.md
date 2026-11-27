@@ -176,6 +176,8 @@ The lower bound and the step should be constants. The upper bound can be:
   * a value above `max_value` stops the loop after the iterations `max_value` allows
   * a value that is not a multiple of the step rounds up: the loop runs until the next value of the iterator reaches it, as `scf.for` does, e.g. 600 with step 512 runs two iterations
 
+  The value can also be written by an SDSC inside the loop it bounds: what an iteration writes decides whether the next one runs, so a loop can stop as soon as a value it computes says so. Unlike the bounds of a plain `scf.for`, the bound is then not fixed for the whole loop.
+
 ### `sdsc.json` filling
 
 The individual fields of the SuperDSC to express an operation and its core mapping is described below:
@@ -327,15 +329,17 @@ OpFuncs are specified within sdsc.json as field `OpFuncs opFuncName` in `sdsc.ds
 |  Broadcast    |  ADD  |   "add"  | DF16 or FP32 |   | Broadcast supported on any number of dimensions and on one or both inputs
 |         | BATCHNORM_FWD  |   "batchnormfwd" | DF16 or FP32 
 |         | BIASADD  |   "biasadd" | DF16 or FP32 
-|         | EQUAL  |   "equal" | DF16 or FP32 
+|         | EQUAL  |   "equal" | DF16 or FP32 | | 1 where the comparison holds, 0 elsewhere
 |         | FNMS  |   "fnms" | DF16 or FP32 
-|         | GREATEREQUAL  |   "greaterequal" | DF16 or FP32 
+|         | GREATEREQUAL  |   "greaterequal" | DF16 or FP32 | | 1 where the comparison holds, 0 elsewhere
+|         | GREATERTHAN  |   "greaterthan" | DF16 or FP32 | | 1 where the comparison holds, 0 elsewhere
 |         | LAYERNORM_NORM  |   "layernormnorm" | DF16 or FP32 
-|         | LESSEREQUAL  |   "lesserequal" | DF16 or FP32 
+|         | LESSEREQUAL  |   "lesserequal" | DF16 or FP32 | | 1 where the comparison holds, 0 elsewhere
+|         | LESSERTHAN  |   "lesserthan" | DF16 or FP32 | | 1 where the comparison holds, 0 elsewhere
 |         | MAXIMUM  |   "maximum" | DF16 or FP32 
 |         | MINIMUM  |   "minimum" | DF16 or FP32 
 |         | MUL  |   "mul" | DF16 or FP32 
-|         | NOTEQUAL  |   "notequal" | DF16 or FP32 
+|         | NOTEQUAL  |   "notequal" | DF16 or FP32 | | 1 where the comparison holds, 0 elsewhere
 |         | REALDIV  |   "realdiv" | DF16 or FP32 
 |         | REVSUB  |   "revsub" | DF16 or FP32 
 |         | SUB  |   "sub" | DF16 or FP32 
